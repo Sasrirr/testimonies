@@ -3,9 +3,15 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { AuditLogService } from '@/common/services/audit-log.service';
 import { QrCodeService } from '@/common/services/qr-code.service';
 import { EmbedIdService } from '@/common/services/embed-id.service';
-import { CreateTestimonyDto, UpdateTestimonyDto, TestimonyResponseDto, EmbedTestimonyResponseDto } from './dto/testimony.dto';
+import {
+  CreateTestimonyDto,
+  UpdateTestimonyDto,
+  TestimonyResponseDto,
+  EmbedTestimonyResponseDto,
+} from './dto/testimony.dto';
 import { TestimonyStatus, UserRole } from '@prisma/client';
 import { JwtPayload } from '@/auth/guards/jwt-auth.guard';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class TestimoniesService {
@@ -14,69 +20,68 @@ export class TestimoniesService {
     private auditLogService: AuditLogService,
     private qrCodeService: QrCodeService,
     private embedIdService: EmbedIdService,
-  ) {}
+  ) { }
 
   /**
    * Create a new testimony
+   *
+   * Dev-friendly behavior:
+   * - If subjectId does not exist and NODE_ENV !== 'production', create a placeholder user automatically.
+   * - In production, original behavior (throw NotFoundException) is preserved.
    */
   async createTestimony(
     createTestimonyDto: CreateTestimonyDto,
     authorId: string,
   ): Promise<TestimonyResponseDto> {
-    const { subjectId, content, category, mediaUrl } = createTestimonyDto;
+    try {
+      const { subjectId, content, category, mediaUrl } = createTestimonyDto;
 
-    // Validate that subject exists
-    const subject = await this.prisma.user.findUnique({
-      where: { id: subjectId },
-    });
+      if (!subjectId) throw new BadRequestException('subjectId is required');
 
-    if (!subject) {
-      throw new NotFoundException('Subject user not found');
+      let subject = await this.prisma.user.findUnique({ where: { id: subjectId } });
+
+      if (!subject) {
+        if (process.env.NODE_ENV === 'production') {
+          throw new NotFoundException('Subject user not found');
+        } else {
+          subject = await this.prisma.user.create({
+            data: {
+              id: subjectId,
+              fullName: 'Placeholder User',
+              email: `${subjectId}@placeholder.local`,
+              role: UserRole.CONSUMER,
+            },
+          });
+        }
+      }
+
+      const embedId = uuidv4();
+      if (!embedId) throw new Error('Failed to generate embedId');
+
+      const testimony = await this.prisma.testimony.create({
+        data: { authorId, subjectId, content, category, mediaUrl, embedId, status: TestimonyStatus.PENDING },
+        include: {
+          author: { select: { id: true, fullName: true, profilePhotoUrl: true } },
+          subject: { select: { id: true, fullName: true, profilePhotoUrl: true } },
+        },
+      });
+
+      await this.auditLogService.log({
+        actorId: authorId,
+        action: `Created testimony for user ${subjectId}`,
+        targetEntity: 'TESTIMONY',
+        targetId: testimony.id,
+        details: { content: content?.substring(0, 100) },
+      });
+
+      return this.mapToTestimonyResponse(testimony);
+
+    } catch (err) {
+      console.error('createTestimony error:', err);
+      throw new BadRequestException(err.message || 'Internal server error');
     }
-
-    // Generate unique embed ID
-    const embedId = await this.embedIdService.generateUniqueEmbedId();
-
-    // Create testimony
-    const testimony = await this.prisma.testimony.create({
-      data: {
-        authorId,
-        subjectId,
-        content,
-        category,
-        mediaUrl,
-        embedId,
-        status: TestimonyStatus.PENDING,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            fullName: true,
-            profilePhotoUrl: true,
-          },
-        },
-        subject: {
-          select: {
-            id: true,
-            fullName: true,
-            profilePhotoUrl: true,
-          },
-        },
-      },
-    });
-
-    // Log the action
-    await this.auditLogService.log({
-      actorId: authorId,
-      action: `Created testimony for user ${subjectId}`,
-      targetEntity: 'TESTIMONY',
-      targetId: testimony.id,
-      details: { content: content.substring(0, 100) },
-    });
-
-    return this.mapToTestimonyResponse(testimony);
   }
+
 
   /**
    * Get a single testimony by embed ID (public endpoint)
@@ -129,8 +134,8 @@ export class TestimoniesService {
     userId: string,
     type: 'authored' | 'received' = 'received',
   ): Promise<TestimonyResponseDto[]> {
-    const whereClause = type === 'authored' 
-      ? { authorId: userId } 
+    const whereClause = type === 'authored'
+      ? { authorId: userId }
       : { subjectId: userId };
 
     const testimonies = await this.prisma.testimony.findMany({
@@ -157,6 +162,46 @@ export class TestimoniesService {
       orderBy: {
         createdAt: 'desc',
       },
+    });
+
+    return testimonies.map(this.mapToTestimonyResponse);
+  }
+
+  /**
+   * Get all public testimonies (verified)
+   */
+  async getPublicTestimonies(): Promise<TestimonyResponseDto[]> {
+    const testimonies = await this.prisma.testimony.findMany({
+      where: { status: TestimonyStatus.VERIFIED },
+      include: {
+        author: {
+          select: { id: true, fullName: true, profilePhotoUrl: true },
+        },
+        subject: {
+          select: { id: true, fullName: true, profilePhotoUrl: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return testimonies.map(this.mapToTestimonyResponse);
+  }
+
+  /**
+   * Get testimonies for a specific business/organization
+   */
+  async getTestimoniesByBusinessId(businessId: string): Promise<TestimonyResponseDto[]> {
+    const testimonies = await this.prisma.testimony.findMany({
+      where: { subjectId: businessId, status: TestimonyStatus.VERIFIED },
+      include: {
+        author: {
+          select: { id: true, fullName: true, profilePhotoUrl: true },
+        },
+        subject: {
+          select: { id: true, fullName: true, profilePhotoUrl: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     });
 
     return testimonies.map(this.mapToTestimonyResponse);
@@ -238,8 +283,8 @@ export class TestimoniesService {
     }
 
     // Check permissions: author can delete their own, admin can delete any
-    const canDelete = 
-      testimony.authorId === user.userId || 
+    const canDelete =
+      testimony.authorId === user.userId ||
       user.role === UserRole.ADMIN;
 
     if (!canDelete) {
@@ -389,5 +434,43 @@ export class TestimoniesService {
       createdAt: testimony.createdAt,
       updatedAt: testimony.updatedAt,
     };
+  }
+
+  // Raise a dispute
+  async raiseDispute(testimonyId: string, userId: string, reason: string) {
+    return this.prisma.dispute.create({
+      data: { testimonyId, raisedById: userId, reason },
+    });
+  }
+
+  // Resolve a dispute (simple MVP: mark outcome and reviewer)
+  async resolveDispute(disputeId: string, adminId: string, outcome: 'approved' | 'rejected') {
+    return this.prisma.dispute.update({
+      where: { id: disputeId },
+      data: { reviewedById: adminId, outcome, status: 'RESOLVED' },
+    });
+  }
+
+  // Get all disputes (optionally unresolved only)
+  async getDisputes(unresolvedOnly = false) {
+    const whereFilter = unresolvedOnly ? { status: 'OPEN' } : {};
+    return this.prisma.dispute.findMany({
+      where: whereFilter,
+      include: { testimony: true, raisedBy: true, reviewedBy: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // Get business reputation
+  async getBusinessReputation(businessId: string) {
+    const verifiedCount = await this.prisma.testimony.count({
+      where: { subjectId: businessId, status: 'VERIFIED' },
+    });
+
+    const disputedCount = await this.prisma.dispute.count({
+      where: { testimony: { subjectId: businessId } },
+    });
+
+    return { businessId, verifiedCount, disputedCount };
   }
 }

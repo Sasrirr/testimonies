@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, CanActivate, ExecutionContext } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
+// ❌ Removed AuthModule
 import { CommonModule } from './common/common.module';
 import { TestimoniesModule } from './testimonies/testimonies.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -28,13 +28,16 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
       useFactory: async (configService: ConfigService) => ({
         pinoHttp: {
           level: configService.get('LOG_LEVEL', 'info'),
-          transport: configService.get('NODE_ENV') === 'development' ? {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              singleLine: true,
-            },
-          } : undefined,
+          transport:
+            configService.get('NODE_ENV') === 'development'
+              ? {
+                target: 'pino-pretty',
+                options: {
+                  colorize: true,
+                  singleLine: true,
+                },
+              }
+              : undefined,
           serializers: {
             req: (req) => ({
               id: req.id,
@@ -73,7 +76,6 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
     // Core modules
     PrismaModule,
-    AuthModule,
     CommonModule,
     TestimoniesModule,
   ],
@@ -95,12 +97,24 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+
+  // Dev-only global allow-all guard to bypass auth/roles during local development / Swagger testing.
+  // IMPORTANT: Remove or guard this behind NODE_ENV !== 'development' before deploying to production.
+  if (process.env.NODE_ENV !== 'production') {
+    const DevAllowAllGuard: CanActivate = {
+      canActivate(_context: ExecutionContext) {
+        return true;
+      },
+    };
+    // This will run in addition to any APP_GUARD providers (e.g. ThrottlerGuard).
+    app.useGlobalGuards(DevAllowAllGuard);
+  }
 
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
@@ -134,7 +148,7 @@ async function bootstrap() {
       .setTitle('Flocci Testimonies API')
       .setDescription('Global trusted ledger for verifiable testimonials')
       .setVersion('1.0')
-      .addBearerAuth()
+      // ❌ removed .addBearerAuth()
       .addTag('testimonies', 'Testimony management operations')
       .addTag('users', 'User-related operations')
       .addTag('organizations', 'Organization management')
@@ -154,10 +168,10 @@ async function bootstrap() {
 
   const port = configService.get('PORT', 3000);
   await app.listen(port);
-  
+
   logger.log(`🚀 Flocci Testimonies Service is running on port ${port}`);
   logger.log(`📚 Environment: ${configService.get('NODE_ENV', 'development')}`);
-  
+
   if (configService.get('NODE_ENV') !== 'production') {
     logger.log(`📖 API Documentation: http://localhost:${port}/api/docs`);
   }

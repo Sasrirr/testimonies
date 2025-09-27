@@ -146,7 +146,7 @@ model Testimony {
   sentiment String?         @db.VarChar(50)
   status    TestimonyStatus @default(PENDING)
   qrCodeUrl String?         @map("qr_code_url")
-  embedId   String          @unique @map("embed_id") @db.VarChar(30)
+  embedId   String          @unique @map("embed_id") @db.VarChar(30)  // <-- plain string now
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -159,6 +159,7 @@ model Testimony {
 
   @@map("testimonies")
 }
+
 
 model Verification {
   id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

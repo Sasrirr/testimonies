@@ -1,13 +1,18 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';
-import { AuthenticatedRequest } from './jwt-auth.guard';
+import { Request } from 'express';
 
 export const ROLES_KEY = 'roles';
 
+// Minimal request interface without JWT
+interface AuthenticatedRequest extends Request {
+  user?: { role?: string };
+}
+
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
@@ -27,7 +32,7 @@ export class RolesGuard implements CanActivate {
     }
 
     const hasRequiredRole = requiredRoles.some((role) => user.role === role);
-    
+
     if (!hasRequiredRole) {
       throw new ForbiddenException(`Access denied. Required roles: ${requiredRoles.join(', ')}`);
     }

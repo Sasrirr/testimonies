@@ -43,7 +43,6 @@ describe('TestimoniesController', () => {
         category: 'SERVICE',
       };
 
-      const userId = 'user-uuid';
       const expectedResult = {
         id: 'testimony-uuid',
         embedId: 'embed123',
@@ -52,12 +51,15 @@ describe('TestimoniesController', () => {
 
       mockTestimoniesService.createTestimony.mockResolvedValue(expectedResult);
 
-      const result = await controller.createTestimony(createTestimonyDto, userId);
+      // Call controller with only the DTO
+      const result = await controller.createTestimony(createTestimonyDto);
 
       expect(result).toBe(expectedResult);
-      expect(service.createTestimony).toHaveBeenCalledWith(createTestimonyDto, userId);
+      // Expect the service to be called with only the DTO
+      expect(service.createTestimony).toHaveBeenCalledWith(createTestimonyDto);
     });
   });
+
 
   describe('getTestimonyByEmbedId', () => {
     it('should return a testimony by embed ID', async () => {
