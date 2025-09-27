@@ -78,6 +78,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     PrismaModule,
     CommonModule,
     TestimoniesModule,
+    // Add OrganizationsModule
+    require('./organizations/organizations.module').OrganizationsModule,
   ],
   providers: [
     // Global guards
