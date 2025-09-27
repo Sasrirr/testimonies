@@ -42,7 +42,8 @@ export class TestimoniesController {
   async createTestimony(
     @Body(ValidationPipe) createTestimonyDto: CreateTestimonyDto,
   ): Promise<TestimonyResponseDto> {
-    const placeholderUserId = 'public-user'; // hardcoded for MVP
+    // Use a valid UUID for the placeholder user
+    const placeholderUserId = '123e4567-e89b-12d3-a456-426614174000';
     return this.testimoniesService.createTestimony(
       createTestimonyDto,
       placeholderUserId,

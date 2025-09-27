@@ -55,7 +55,8 @@ export class TestimoniesService {
         }
       }
 
-      const embedId = uuidv4();
+
+      const embedId = await this.embedIdService.generateUniqueEmbedId();
       if (!embedId) throw new Error('Failed to generate embedId');
 
       const testimony = await this.prisma.testimony.create({
