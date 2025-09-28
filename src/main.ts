@@ -8,7 +8,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
-// ❌ Removed AuthModule
+import { AuthModule } from './auth/auth.module';
+import { JwtModule } from '@nestjs/jwt';
 import { CommonModule } from './common/common.module';
 import { TestimoniesModule } from './testimonies/testimonies.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -74,12 +75,13 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
       inject: [ConfigService],
     }),
 
-    // Core modules
-    PrismaModule,
-    CommonModule,
-    TestimoniesModule,
-    // Add OrganizationsModule
-    require('./organizations/organizations.module').OrganizationsModule,
+  // Core modules
+  // JwtModule should only be imported in AuthModule, not globally
+  PrismaModule,
+  CommonModule,
+  TestimoniesModule,
+  AuthModule,
+  require('./organizations/organizations.module').OrganizationsModule,
   ],
   providers: [
     // Global guards

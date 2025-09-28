@@ -50,6 +50,7 @@ export class TestimoniesService {
               fullName: 'Placeholder User',
               email: `${subjectId}@placeholder.local`,
               role: UserRole.CONSUMER,
+              password: 'placeholder-password', // Add placeholder password
             },
           });
         }
