@@ -10,6 +10,7 @@ import {
   ValidationPipe,
   ParseUUIDPipe,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -44,13 +45,17 @@ export class TestimoniesController {
   @UseGuards(JwtAuthGuard)
   async createTestimony(
     @Body(ValidationPipe) createTestimonyDto: CreateTestimonyDto,
+    @Req() req: any,
   ): Promise<TestimonyResponseDto> {
-    // Replace placeholder with actual user from JWT payload
-    // ...existing code...
-    const placeholderUserId = '123e4567-e89b-12d3-a456-426614174000';
+    // Extract user ID from JWT token
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new Error('User ID not found in JWT token');
+    }
+    
     return this.testimoniesService.createTestimony(
       createTestimonyDto,
-      placeholderUserId,
+      userId,
     );
   }
 

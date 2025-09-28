@@ -51,12 +51,22 @@ describe('TestimoniesController', () => {
 
       mockTestimoniesService.createTestimony.mockResolvedValue(expectedResult);
 
-      // Call controller with only the DTO
-      const result = await controller.createTestimony(createTestimonyDto);
+      // Mock request object with user data from JWT
+      const mockRequest = {
+        user: {
+          userId: '123e4567-e89b-12d3-a456-426614174000'
+        }
+      };
+
+      // Call controller with DTO and mock request
+      const result = await controller.createTestimony(createTestimonyDto, mockRequest);
 
       expect(result).toBe(expectedResult);
-      // Expect the service to be called with only the DTO
-      expect(service.createTestimony).toHaveBeenCalledWith(createTestimonyDto);
+      // Expect the service to be called with DTO and userId
+      expect(service.createTestimony).toHaveBeenCalledWith(
+        createTestimonyDto, 
+        '123e4567-e89b-12d3-a456-426614174000'
+      );
     });
   });
 
