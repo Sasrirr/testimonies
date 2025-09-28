@@ -87,6 +87,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     LoginModule,
     require('./organizations/organizations.module').OrganizationsModule,
     require('./admin/admin.module').AdminModule,
+    require('./verification/verification.module').VerificationModule,
   ],
   providers: [
     // Global guards

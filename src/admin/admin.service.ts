@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { VerificationService } from '../verification/verification.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private verificationService: VerificationService,
+  ) { }
 
   async getDashboardStats() {
     // Example: count testimonies, organizations, users
@@ -29,38 +33,14 @@ export class AdminService {
   }
 
   async processVerification(dto: { testimonyId: string; outcome: string; adminId: string; notes?: string }) {
-    // 1. Update Testimony Status
-    const testimony = await this.prisma.testimony.findUnique({ where: { id: dto.testimonyId } });
-    if (!testimony) throw new NotFoundException('Testimony not found');
-    if (testimony.status !== 'PENDING') throw new BadRequestException('Only pending testimonies can be verified');
-
-    let qrCodeUrl = null;
-    if (dto.outcome === 'VERIFIED') {
-      // Simulate QR code generation
-      qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${testimony.embedId}`;
-    }
-
-    await this.prisma.testimony.update({
-      where: { id: dto.testimonyId },
-      data: {
-        status: dto.outcome === 'VERIFIED' ? 'VERIFIED' : dto.outcome === 'REJECTED' ? 'REJECTED' : 'PENDING',
-        qrCodeUrl,
-      },
+    // Use the dedicated VerificationService for all verification logic
+    return await this.verificationService.createVerification({
+      testimonyId: dto.testimonyId,
+      adminId: dto.adminId,
+      outcome: dto.outcome as 'VERIFIED' | 'REJECTED' | 'PENDING',
+      notes: dto.notes,
+      source: 'MANUAL',
+      proofType: 'MANUAL_REVIEW',
     });
-
-    // 2. Create Verification Record
-    await this.prisma.verification.create({
-      data: {
-        testimonyId: dto.testimonyId,
-        verifiedById: dto.adminId,
-        outcome: dto.outcome === 'VERIFIED' ? 'VERIFIED' : dto.outcome === 'REJECTED' ? 'REJECTED' : 'PENDING',
-        notes: dto.notes || '',
-        proofType: 'MANUAL',
-        proofData: {},
-        source: 'MANUAL',
-      },
-    });
-
-    return { success: true, testimonyId: dto.testimonyId, outcome: dto.outcome };
   }
 }

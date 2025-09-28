@@ -14,7 +14,8 @@ This document reflects the **actual implemented system** - not theoretical specs
 - **Authentication**: JWT-based with role guards (`JwtAuthGuard`, `RolesGuard`)
 - **QR Generation**: External QR service integration
 - **Embed System**: Unique `embedId` per testimony
-- **Audit Trail**: Complete verification logging
+- **Audit Trail**: Dedicated Verification Module with complete logging
+- **Modular Architecture**: Separated concerns with dedicated verification service
 
 ### Database Schema (Actual Implementation)
 ```sql
@@ -155,6 +156,15 @@ POST /api/api/v1/admin/verifications          - Verify testimony ✅
 GET  /api/api/v1/admin/verifications          - Verification history ✅
 ```
 
+### Verification Endpoints (New Module)
+```
+POST /api/v1/verification             - Create verification record
+GET  /api/v1/verification/history     - Verification history with filters
+GET  /api/v1/verification/testimony/:id - Get verification by testimony ID
+GET  /api/v1/verification/stats       - Verification statistics
+POST /api/v1/verification/bulk        - Bulk verification operations
+```
+
 ### Organization Endpoints
 ```
 GET  /api/api/v1/organizations/me                      - Organization dashboard
@@ -177,38 +187,75 @@ GET  /api/api/v1/testimonies/embed/{embedId}  - Public testimony access
 4. Creates testimony with status `PENDING`
 5. Returns testimony object with embed ID
 
-### Admin Verification Flow (Core MVP - Tested ✅)
+### Verification System (Dedicated Module - Enhanced ✅)
 ```typescript
-// Actual implementation in AdminService
-async processVerification(dto: {
-  testimonyId: string;
-  outcome: string;
-  adminId: string;
-  notes?: string;
-}) {
-  // 1. Update Testimony Status & Generate QR Code
-  const qrCodeUrl = outcome === 'VERIFIED' 
-    ? `https://api.qrserver.com/v1/create-qr-code/?data=${testimony.embedId}`
-    : null;
+// New VerificationService - Dedicated business logic
+async createVerification(dto: CreateVerificationDto): Promise<VerificationResult> {
+  // 1. Validate testimony and admin exist
+  const testimony = await this.prisma.testimony.findUnique({
+    where: { id: dto.testimonyId },
+    include: { author: true, subject: true }
+  });
+  
+  // 2. Determine outcome and generate QR code if verified
+  let qrCodeUrl = null;
+  if (dto.outcome === 'VERIFIED') {
+    qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${testimony.embedId}`;
+  }
+  
+  // 3. Transaction: Update testimony + Create verification record
+  const result = await this.prisma.$transaction(async (tx) => {
+    const verification = await tx.verification.create({
+      data: {
+        testimonyId: dto.testimonyId,
+        verifiedById: dto.adminId,
+        outcome: newStatus,
+        source: dto.source as VerificationSource,
+        notes: dto.notes || '',
+        proofType: dto.proofType || 'MANUAL_REVIEW',
+        proofData: dto.proofData || {},
+      },
+    });
     
-  await this.prisma.testimony.update({
-    where: { id: testimonyId },
-    data: { status: outcome, qrCodeUrl }
+    await tx.testimony.update({
+      where: { id: dto.testimonyId },
+      data: { status: newStatus, qrCodeUrl },
+    });
+    
+    return verification;
   });
+  
+  return {
+    verificationId: result.id,
+    testimonyId: result.testimonyId,
+    outcome: result.outcome,
+    verifiedBy: dto.adminId,
+    verifiedAt: result.createdAt,
+    qrCodeUrl,
+  };
+}
+```
 
-  // 2. Create Verification Audit Record
-  await this.prisma.verification.create({
-    data: {
-      testimonyId,
-      verifiedById: adminId,
-      outcome,
-      notes,
-      proofType: 'MANUAL',
-      source: 'MANUAL'
-    }
+### QR Code Implementation (Current Strategy)
+**Current Approach**: External QR generation service for space efficiency
+- QR codes generated **on-demand** via `https://api.qrserver.com/v1/create-qr-code/`
+- **Database storage**: Only URL strings (~80 bytes per QR)
+- **User experience**: Frontend receives QR URL → Browser fetches image from external service
+- **Alternative ready**: Internal `QrCodeService` available for future base64/file-based generation
+- **Trade-off**: Minimal storage vs external service dependency (chosen for MVP constraints)
+
+### Admin Integration (Simplified)
+```typescript
+// AdminService now delegates to VerificationService
+async processVerification(dto: { testimonyId: string; outcome: string; adminId: string; notes?: string }) {
+  return await this.verificationService.createVerification({
+    testimonyId: dto.testimonyId,
+    adminId: dto.adminId,
+    outcome: dto.outcome as 'VERIFIED' | 'REJECTED' | 'PENDING',
+    notes: dto.notes,
+    source: 'MANUAL',
+    proofType: 'MANUAL_REVIEW',
   });
-
-  return { success: true, testimonyId, outcome };
 }
 ```
 
@@ -293,10 +340,16 @@ src/
 │   └── decorators/
 │       ├── current-user.decorator.ts
 │       └── roles.decorator.ts
-├── admin/                           # Admin verification system ✅
-│   ├── admin.controller.ts         # Dashboard, verification endpoints
-│   ├── admin.service.ts            # Verification business logic
+├── admin/                           # Admin dashboard system ✅
+│   ├── admin.controller.ts         # Dashboard, admin endpoints
+│   ├── admin.service.ts            # Admin workflow coordination
 │   └── admin.module.ts
+├── verification/                    # Dedicated verification system ✅
+│   ├── verification.controller.ts  # Verification REST endpoints
+│   ├── verification.service.ts     # Core verification business logic
+│   ├── verification.module.ts      # Module configuration
+│   └── dto/
+│       └── verification.dto.ts     # Validation & API documentation
 ├── testimonies/                     # Core testimony management ✅
 │   ├── testimonies.controller.ts   # CRUD endpoints
 │   ├── testimonies.service.ts      # Business logic
@@ -344,12 +397,15 @@ The implemented MVP successfully demonstrates:
 2. ✅ **Testimony Submission** - Consumers can submit testimonies → Status: PENDING
 3. ✅ **Admin Authentication** - Role-based access control working
 4. ✅ **Admin Dashboard** - System statistics and pending testimonies view
-5. ✅ **Admin Verification** - Core business logic: PENDING → VERIFIED + QR code
-6. ✅ **Audit Trail** - Complete verification history logging
-7. ✅ **Role-Based Security** - Proper JWT guards and role restrictions
-8. ✅ **Database Integration** - Full Prisma ORM with PostgreSQL
-9. ✅ **Error Handling** - Global exception filters and validation
-10. ✅ **API Documentation** - Swagger UI available at `/api/docs`
+5. ✅ **Verification Module** - Dedicated service for verification business logic
+6. ✅ **Admin Integration** - Seamless admin → verification service workflow
+7. ✅ **Complete Audit Trail** - WHO/WHEN/WHY/HOW verification tracking
+8. ✅ **QR Code Generation** - Automatic QR codes for verified testimonies
+9. ✅ **Role-Based Security** - Proper JWT guards and role restrictions
+10. ✅ **Database Integration** - Full Prisma ORM with PostgreSQL
+11. ✅ **Modular Architecture** - Separated concerns with dedicated modules
+12. ✅ **Error Handling** - Global exception filters and validation
+13. ✅ **API Documentation** - Swagger UI available at `/api/docs`
 
 ## 🔧 Technical Implementation Details
 
@@ -365,11 +421,19 @@ The implemented MVP successfully demonstrates:
 - Status transitions: `PENDING` → `VERIFIED`/`REJECTED`
 - QR codes generated only for verified testimonies
 
-### Admin Verification (Core Business Logic)
-- Single admin can verify any testimony
-- Verification creates audit record in `Verification` table
-- QR code URL stored in testimony record
-- Notes field for admin justification
+### Verification Module Architecture (Enhanced)
+- **Dedicated VerificationService**: Core business logic separation
+- **Complete Audit Trail**: WHO (`verifiedById`), WHEN (`createdAt`), WHY (`notes`), HOW (`proofType`, `source`)
+- **Transaction Safety**: Atomic updates to testimony + verification record
+- **Flexible Outcomes**: Support for VERIFIED, REJECTED, PENDING states
+- **Bulk Operations**: Support for batch verification processing
+- **Statistics & Reporting**: Built-in verification analytics
+
+### Admin Integration (Simplified)
+- AdminService delegates verification to VerificationService
+- Clean separation between admin workflow and verification logic
+- Admin endpoints remain unchanged for backward compatibility
+- Enhanced verification capabilities available through dedicated endpoints
 
 ### Database Relationships (Implemented)
 ```sql
@@ -384,13 +448,18 @@ Organization.userId → User.id
 
 ### ✅ Implemented & Working
 - [x] JWT Authentication with role-based access
-- [x] Complete admin verification workflow
+- [x] Dedicated Verification Module with complete business logic
+- [x] Admin verification workflow with service delegation
+- [x] Complete audit trail (WHO/WHEN/WHY/HOW tracking)
 - [x] Database relationships and constraints
+- [x] Transaction-safe verification operations
+- [x] Bulk verification capabilities
+- [x] Verification statistics and reporting
 - [x] Error handling and validation
-- [x] Audit trail logging
 - [x] API documentation (Swagger)
 - [x] Input validation with DTOs
 - [x] Password hashing and security
+- [x] Modular architecture with separated concerns
 
 ### 🔄 Ready for Enhancement
 - [ ] Automated verification rules
