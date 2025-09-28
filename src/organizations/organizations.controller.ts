@@ -30,7 +30,7 @@ export class OrganizationsController {
   deleteOrganization(@Param('id') id: string) {
     return this.organizationsService.deleteOrganization(id);
   }
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(private readonly organizationsService: OrganizationsService) { }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
