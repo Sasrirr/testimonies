@@ -39,4 +39,41 @@ export class OrganizationsService {
       },
     });
   }
+
+  async createOrganization(dto: any) {
+    // dto: { orgName, userId, sector?, licenseId?, contactInfo? }
+    return await this.prisma.organization.create({
+      data: {
+        orgName: dto.orgName,
+        userId: dto.userId,
+        sector: dto.sector,
+        licenseId: dto.licenseId,
+        contactInfo: dto.contactInfo,
+      },
+    });
+  }
+
+  async getOrganizationById(id: string) {
+    return await this.prisma.organization.findUnique({
+      where: { id },
+    });
+  }
+
+  async updateOrganization(id: string, dto: any) {
+    return await this.prisma.organization.update({
+      where: { id },
+      data: {
+        orgName: dto.orgName,
+        sector: dto.sector,
+        licenseId: dto.licenseId,
+        contactInfo: dto.contactInfo,
+      },
+    });
+  }
+
+  async deleteOrganization(id: string) {
+    return await this.prisma.organization.delete({
+      where: { id },
+    });
+  }
 }

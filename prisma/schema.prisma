@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +7,188 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========= ENUMS =========
+model User {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName            String           @map("full_name") @db.VarChar(255)
+  email               String           @unique @db.VarChar(255)
+  phone               String?          @unique @db.VarChar(50)
+  profilePhotoUrl     String?          @map("profile_photo_url")
+  role                UserRole
+  status              EntityStatus     @default(PENDING_VERIFICATION)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  password            String           @db.VarChar(255)
+  admin               Admin?
+  auditLogs           AuditLog[]
+  behaviorProfile     BehaviorProfile?
+  disputes            Dispute[]
+  reviewedDisputes    Dispute[]        @relation("DisputeReviewer")
+  employee            Employee?
+  integrations        Integration[]
+  interactions        Interaction[]
+  organization        Organization?
+  reputation          Reputation?
+  authoredTestimonies Testimony[]      @relation("TestimonyAuthor")
+  subjectTestimonies  Testimony[]      @relation("TestimonySubject")
+  verifications       Verification[]
+
+  @@map("users")
+}
+
+model Organization {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String     @unique @map("user_id") @db.Uuid
+  orgName     String     @map("org_name") @db.VarChar(255)
+  sector      String?    @db.VarChar(100)
+  licenseId   String?    @map("license_id") @db.VarChar(100)
+  contactInfo Json?      @map("contact_info")
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  employees   Employee[]
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("organizations")
+}
+
+model Employee {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String       @unique @map("user_id") @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  position       String?      @db.VarChar(100)
+  joinedAt       DateTime?    @map("joined_at") @db.Timestamptz(6)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("employees")
+}
+
+model Admin {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String @unique @map("user_id") @db.Uuid
+  permissions Json
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+model Testimony {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authorId     String          @map("author_id") @db.Uuid
+  subjectId    String          @map("subject_id") @db.Uuid
+  content      String
+  category     String?         @db.VarChar(100)
+  mediaUrl     String?         @map("media_url")
+  sentiment    String?         @db.VarChar(50)
+  status       TestimonyStatus @default(PENDING)
+  qrCodeUrl    String?         @map("qr_code_url")
+  embedId      String          @unique @map("embed_id") @db.VarChar(30)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  disputes     Dispute[]
+  interactions Interaction[]
+  author       User            @relation("TestimonyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  subject      User            @relation("TestimonySubject", fields: [subjectId], references: [id])
+  verification Verification?
+
+  @@map("testimonies")
+}
+
+model Verification {
+  id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  testimonyId  String             @unique @map("testimony_id") @db.Uuid
+  proofType    String             @map("proof_type") @db.VarChar(100)
+  proofData    Json               @map("proof_data")
+  source       VerificationSource
+  verifiedById String?            @map("verified_by_id") @db.Uuid
+  outcome      TestimonyStatus
+  notes        String?
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  testimony    Testimony          @relation(fields: [testimonyId], references: [id], onDelete: Cascade)
+  verifiedBy   User?              @relation(fields: [verifiedById], references: [id])
+
+  @@map("verifications")
+}
+
+model Interaction {
+  id          BigInt           @id @default(autoincrement())
+  userId      String           @map("user_id") @db.Uuid
+  targetType  TargetEntityType @map("target_type")
+  targetId    String           @map("target_id") @db.Uuid
+  interaction InteractionType
+  metadata    Json?
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  testimony   Testimony        @relation(fields: [targetId], references: [id])
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("interactions")
+}
+
+model Reputation {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  score            Decimal  @default(75.00) @db.Decimal(5, 2)
+  lastCalculatedAt DateTime @default(now()) @map("last_calculated_at") @db.Timestamptz(6)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reputations")
+}
+
+model BehaviorProfile {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  traits           Json
+  reliabilityScore Decimal  @default(75.00) @map("reliability_score") @db.Decimal(5, 2)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("behavior_profiles")
+}
+
+model Dispute {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  testimonyId  String    @map("testimony_id") @db.Uuid
+  raisedById   String    @map("raised_by_id") @db.Uuid
+  reviewedById String?   @map("reviewed_by_id") @db.Uuid
+  reason       String
+  outcome      String?   @db.VarChar(100)
+  status       String    @default("OPEN") @db.VarChar(50)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  raisedBy     User      @relation(fields: [raisedById], references: [id], onDelete: Cascade)
+  reviewedBy   User?     @relation("DisputeReviewer", fields: [reviewedById], references: [id])
+  testimony    Testimony @relation(fields: [testimonyId], references: [id], onDelete: Cascade)
+
+  @@map("disputes")
+}
+
+model AuditLog {
+  id           BigInt            @id @default(autoincrement())
+  actorId      String?           @map("actor_id") @db.Uuid
+  action       String
+  targetEntity TargetEntityType? @map("target_entity")
+  targetId     String?           @map("target_id") @db.Uuid
+  details      Json?
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  actor        User?             @relation(fields: [actorId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Integration {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  type      IntegrationType
+  provider  String          @db.VarChar(100)
+  metadata  Json
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("integrations")
+}
+
 enum UserRole {
   CONSUMER
   ORGANIZATION
@@ -59,213 +237,4 @@ enum IntegrationType {
   DOCUMENT
   PLATFORM
   BUSINESS_TOOL
-}
-
-// ========= CORE MODELS =========
-
-model User {
-  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fullName          String       @map("full_name") @db.VarChar(255)
-  email             String       @unique @db.VarChar(255)
-  password          String       @db.VarChar(255)
-  phone             String?      @unique @db.VarChar(50)
-  profilePhotoUrl   String?      @map("profile_photo_url")
-  role              UserRole
-  status            EntityStatus @default(PENDING_VERIFICATION)
-  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  organization      Organization?
-  employee          Employee?
-  admin             Admin?
-  authoredTestimonies Testimony[] @relation("TestimonyAuthor")
-  subjectTestimonies  Testimony[] @relation("TestimonySubject")
-  interactions      Interaction[]
-  reputation        Reputation?
-  behaviorProfile   BehaviorProfile?
-  disputes          Dispute[]
-  reviewedDisputes  Dispute[]    @relation("DisputeReviewer")
-  verifications     Verification[]
-  integrations      Integration[]
-  auditLogs         AuditLog[]
-
-  @@map("users")
-}
-
-model Organization {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String   @unique @map("user_id") @db.Uuid
-  orgName     String   @map("org_name") @db.VarChar(255)
-  sector      String?  @db.VarChar(100)
-  licenseId   String?  @map("license_id") @db.VarChar(100)
-  contactInfo Json?    @map("contact_info")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  employees   Employee[]
-
-  @@map("organizations")
-}
-
-model Employee {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String    @unique @map("user_id") @db.Uuid
-  organizationId String    @map("organization_id") @db.Uuid
-  position       String?   @db.VarChar(100)
-  joinedAt       DateTime? @map("joined_at") @db.Timestamptz(6)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@map("employees")
-}
-
-model Admin {
-  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String @unique @map("user_id") @db.Uuid
-  permissions Json
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("admins")
-}
-
-model Testimony {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  authorId  String          @map("author_id") @db.Uuid
-  subjectId String          @map("subject_id") @db.Uuid
-  content   String
-  category  String?         @db.VarChar(100)
-  mediaUrl  String?         @map("media_url")
-  sentiment String?         @db.VarChar(50)
-  status    TestimonyStatus @default(PENDING)
-  qrCodeUrl String?         @map("qr_code_url")
-  embedId   String          @unique @map("embed_id") @db.VarChar(30)  // <-- plain string now
-  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  author       User           @relation("TestimonyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  subject      User           @relation("TestimonySubject", fields: [subjectId], references: [id])
-  verification Verification?
-  disputes     Dispute[]
-  interactions Interaction[]
-
-  @@map("testimonies")
-}
-
-
-model Verification {
-  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  testimonyId  String              @unique @map("testimony_id") @db.Uuid
-  proofType    String              @map("proof_type") @db.VarChar(100)
-  proofData    Json                @map("proof_data")
-  source       VerificationSource
-  verifiedById String?             @map("verified_by_id") @db.Uuid
-  outcome      TestimonyStatus
-  notes        String?
-  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  testimony  Testimony @relation(fields: [testimonyId], references: [id], onDelete: Cascade)
-  verifiedBy User?     @relation(fields: [verifiedById], references: [id])
-
-  @@map("verifications")
-}
-
-model Interaction {
-  id           BigInt             @id @default(autoincrement())
-  userId       String             @map("user_id") @db.Uuid
-  targetType   TargetEntityType   @map("target_type")
-  targetId     String             @map("target_id") @db.Uuid
-  interaction  InteractionType
-  metadata     Json?
-  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  testimony Testimony? @relation(fields: [targetId], references: [id])
-
-  @@map("interactions")
-}
-
-model Reputation {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId            String   @unique @map("user_id") @db.Uuid
-  score             Decimal  @default(75.00) @db.Decimal(5, 2)
-  lastCalculatedAt  DateTime @default(now()) @map("last_calculated_at") @db.Timestamptz(6)
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("reputations")
-}
-
-model BehaviorProfile {
-  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String  @unique @map("user_id") @db.Uuid
-  traits           Json
-  reliabilityScore Decimal @default(75.00) @map("reliability_score") @db.Decimal(5, 2)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("behavior_profiles")
-}
-
-model Dispute {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  testimonyId  String   @map("testimony_id") @db.Uuid
-  raisedById   String   @map("raised_by_id") @db.Uuid
-  reviewedById String?  @map("reviewed_by_id") @db.Uuid
-  reason       String
-  outcome      String?  @db.VarChar(100)
-  status       String   @default("OPEN") @db.VarChar(50)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  testimony    Testimony @relation(fields: [testimonyId], references: [id], onDelete: Cascade)
-  raisedBy     User      @relation(fields: [raisedById], references: [id], onDelete: Cascade)
-  reviewedBy   User?     @relation("DisputeReviewer", fields: [reviewedById], references: [id])
-
-  @@map("disputes")
-}
-
-model AuditLog {
-  id           BigInt            @id @default(autoincrement())
-  actorId      String?           @map("actor_id") @db.Uuid
-  action       String
-  targetEntity TargetEntityType? @map("target_entity")
-  targetId     String?           @map("target_id") @db.Uuid
-  details      Json?
-  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  actor User? @relation(fields: [actorId], references: [id])
-
-  @@map("audit_logs")
-}
-
-model Integration {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String          @map("user_id") @db.Uuid
-  type      IntegrationType
-  provider  String          @db.VarChar(100)
-  metadata  Json
-  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("integrations")
 }

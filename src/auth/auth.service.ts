@@ -32,7 +32,11 @@ export class AuthService {
       email: user.email,
       role: user.role,
     };
-    const accessToken = this.jwtService.sign(payload);
+  // Always use the secret configured in JwtModule
+  const secret = this.jwtService['options']?.secret;
+  console.log('[AuthService] Signing JWT payload:', payload);
+  console.log('[AuthService] Signing with secret:', secret);
+  const accessToken = this.jwtService.sign(payload, { secret });
     return {
       accessToken,
       userId: user.id,

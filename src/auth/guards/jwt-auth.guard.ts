@@ -35,6 +35,7 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+  console.log('[JwtAuthGuard] Authorization header:', request.headers.authorization);
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
@@ -42,27 +43,36 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      // Decode JWT header to get the key ID
+      if (process.env.NODE_ENV !== 'production') {
+        // Local dev: verify with HS256 and secret
+  const secret = this.configService.get<string>('JWT_SECRET');
+  console.log('[JwtAuthGuard] Using secret for verification:', secret);
+        const decodedHeader = this.jwtService.decode(token, { complete: true }) as any;
+        console.log('[JwtAuthGuard] JWT Header:', decodedHeader?.header);
+        const payload = this.jwtService.verify(token, {
+          secret,
+          algorithms: ['HS256'],
+        }) as JwtPayload;
+        console.log('[JwtAuthGuard] Decoded JWT payload:', payload);
+        if (!payload.userId || !payload.email || !payload.role) {
+          throw new UnauthorizedException('JWT payload missing required fields');
+        }
+        request.user = payload;
+        return true;
+      }
+      // Production: verify with RS256 and JWKS
       const decodedHeader = this.jwtService.decode(token, { complete: true }) as any;
       if (!decodedHeader?.header?.kid) {
         throw new UnauthorizedException('Invalid JWT token structure');
       }
-
-      // Get the signing key from JWKS
       const key = await this.getSigningKey(decodedHeader.header.kid);
-      
-      // Verify the JWT with the public key
       const payload = this.jwtService.verify(token, {
         algorithms: ['RS256'],
         publicKey: key,
       }) as JwtPayload;
-
-      // Validate required fields
       if (!payload.userId || !payload.email || !payload.role) {
         throw new UnauthorizedException('JWT payload missing required fields');
       }
-
-      // Attach user info to request
       request.user = payload;
       return true;
     } catch (error) {

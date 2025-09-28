@@ -1,11 +1,35 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+// ...existing code...
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
 
 @ApiTags('organizations')
 @Controller('api/v1/organizations')
 export class OrganizationsController {
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  createOrganization(@Body() dto: any) {
+    return this.organizationsService.createOrganization(dto);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  getOrganization(@Param('id') id: string) {
+    return this.organizationsService.getOrganizationById(id);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  updateOrganization(@Param('id') id: string, @Body() dto: any) {
+    return this.organizationsService.updateOrganization(id, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  deleteOrganization(@Param('id') id: string) {
+    return this.organizationsService.deleteOrganization(id);
+  }
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   @Get('me')

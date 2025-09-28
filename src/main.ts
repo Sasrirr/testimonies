@@ -12,6 +12,8 @@ import { AuthModule } from './auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { CommonModule } from './common/common.module';
 import { TestimoniesModule } from './testimonies/testimonies.module';
+import { RegistrationModule } from './registration/registration.module';
+import { LoginModule } from './login/login.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
@@ -81,6 +83,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
   CommonModule,
   TestimoniesModule,
   AuthModule,
+  RegistrationModule,
+  LoginModule,
   require('./organizations/organizations.module').OrganizationsModule,
   ],
   providers: [
@@ -127,7 +131,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      // Removed forbidNonWhitelisted to allow extra fields in DTOs
       transform: true,
       disableErrorMessages: configService.get('NODE_ENV') === 'production',
       validationError: {
@@ -152,7 +156,13 @@ async function bootstrap() {
       .setTitle('Flocci Testimonies API')
       .setDescription('Global trusted ledger for verifiable testimonials')
       .setVersion('1.0')
-      // ❌ removed .addBearerAuth()
+      .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        in: 'header',
+      }, 'JWT-auth')
       .addTag('testimonies', 'Testimony management operations')
       .addTag('users', 'User-related operations')
       .addTag('organizations', 'Organization management')

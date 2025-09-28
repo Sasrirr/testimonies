@@ -9,6 +9,7 @@ import {
   Query,
   ValidationPipe,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,6 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { TestimoniesService } from './testimonies.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CreateTestimonyDto,
   UpdateTestimonyDto,
@@ -32,17 +34,19 @@ export class TestimoniesController {
   constructor(private readonly testimoniesService: TestimoniesService) { }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new testimony (no auth)' })
+  @ApiOperation({ summary: 'Create a new testimony (auth required)' })
   @ApiResponse({
     status: 201,
     description: 'Testimony created successfully',
     type: TestimonyResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @UseGuards(JwtAuthGuard)
   async createTestimony(
     @Body(ValidationPipe) createTestimonyDto: CreateTestimonyDto,
   ): Promise<TestimonyResponseDto> {
-    // Use a valid UUID for the placeholder user
+    // Replace placeholder with actual user from JWT payload
+    // ...existing code...
     const placeholderUserId = '123e4567-e89b-12d3-a456-426614174000';
     return this.testimoniesService.createTestimony(
       createTestimonyDto,
@@ -51,24 +55,26 @@ export class TestimoniesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all public verified testimonies' })
+  @ApiOperation({ summary: 'Get all public verified testimonies (auth required)' })
   @ApiResponse({
     status: 200,
     description: 'Public testimonies retrieved successfully',
     type: [TestimonyResponseDto],
   })
+  @UseGuards(JwtAuthGuard)
   async getPublicTestimonies(): Promise<TestimonyResponseDto[]> {
     return this.testimoniesService.getPublicTestimonies();
   }
 
   @Get('business/:businessId')
-  @ApiOperation({ summary: 'Get verified testimonies for a specific business' })
+  @ApiOperation({ summary: 'Get verified testimonies for a specific business (auth required)' })
   @ApiParam({ name: 'businessId', description: 'UUID of the business/organization' })
   @ApiResponse({
     status: 200,
     description: 'Business testimonies retrieved successfully',
     type: [TestimonyResponseDto],
   })
+  @UseGuards(JwtAuthGuard)
   async getTestimoniesByBusinessId(
     @Param('businessId', ParseUUIDPipe) businessId: string,
   ): Promise<TestimonyResponseDto[]> {
@@ -76,7 +82,7 @@ export class TestimoniesController {
   }
 
   @Get(':embedId')
-  @ApiOperation({ summary: 'Get a testimony by embed ID (public)' })
+  @ApiOperation({ summary: 'Get a testimony by embed ID (auth required)' })
   @ApiParam({
     name: 'embedId',
     description: 'Unique embed ID of the testimony',
@@ -88,6 +94,7 @@ export class TestimoniesController {
     type: EmbedTestimonyResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Testimony not found or not verified' })
+  @UseGuards(JwtAuthGuard)
   async getTestimonyByEmbedId(
     @Param('embedId') embedId: string,
   ): Promise<EmbedTestimonyResponseDto> {
@@ -95,7 +102,7 @@ export class TestimoniesController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Update a testimony (author only, no auth)' })
+  @ApiOperation({ summary: 'Update a testimony (author only, auth required)' })
   @ApiParam({
     name: 'id',
     description: 'UUID of the testimony to update',
@@ -105,10 +112,13 @@ export class TestimoniesController {
     description: 'Testimony updated successfully',
     type: TestimonyResponseDto,
   })
+  @UseGuards(JwtAuthGuard)
   async updateTestimony(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(ValidationPipe) updateTestimonyDto: UpdateTestimonyDto,
   ): Promise<TestimonyResponseDto> {
+    // Replace placeholder with actual user from JWT payload
+    // ...existing code...
     const placeholderUser = {
       userId: 'public-user',
       role: UserRole.CONSUMER,
@@ -122,15 +132,18 @@ export class TestimoniesController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a testimony (no auth)' })
+  @ApiOperation({ summary: 'Delete a testimony (auth required)' })
   @ApiParam({
     name: 'id',
     description: 'UUID of the testimony to delete',
   })
   @ApiResponse({ status: 204, description: 'Testimony deleted successfully' })
+  @UseGuards(JwtAuthGuard)
   async deleteTestimony(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
+    // Replace placeholder with actual user from JWT payload
+    // ...existing code...
     const placeholderUser = {
       userId: 'public-user',
       role: UserRole.ADMIN,
@@ -140,12 +153,13 @@ export class TestimoniesController {
   }
 
   @Get('pending/list')
-  @ApiOperation({ summary: 'Get all pending testimonies (admin only, no auth)' })
+  @ApiOperation({ summary: 'Get all pending testimonies (admin only, auth required)' })
   @ApiResponse({
     status: 200,
     description: 'Pending testimonies retrieved successfully',
     type: [TestimonyResponseDto],
   })
+  @UseGuards(JwtAuthGuard)
   async getPendingTestimonies(): Promise<TestimonyResponseDto[]> {
     return this.testimoniesService.getPendingTestimonies();
   }
