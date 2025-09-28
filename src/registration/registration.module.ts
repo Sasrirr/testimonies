@@ -8,4 +8,4 @@ import { UsersModule } from '../users/users.module';
   controllers: [RegistrationController],
   providers: [RegistrationService],
 })
-export class RegistrationModule {}
+export class RegistrationModule { }

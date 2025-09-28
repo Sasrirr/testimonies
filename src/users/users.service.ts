@@ -10,18 +10,18 @@ export class UsersService {
 
   async createUser(dto: { email: string; password: string; fullName?: string; role?: string }) {
     console.log('UsersService.createUser DTO:', dto);
-      console.log('UsersService.createUser received DTO:', dto);
-      const user = await this.prisma.user.create({
-        data: {
-          fullName: dto.fullName ?? '',
-          email: dto.email,
-          password: dto.password,
-          role: (dto.role as UserRole) || UserRole.CONSUMER,
-          status: 'ACTIVE',
-        },
-      });
-      console.log('UsersService.createUser created user:', user);
-      return user;
+    console.log('UsersService.createUser received DTO:', dto);
+    const user = await this.prisma.user.create({
+      data: {
+        fullName: dto.fullName ?? '',
+        email: dto.email,
+        password: dto.password,
+        role: (dto.role as UserRole) || UserRole.CONSUMER,
+        status: 'ACTIVE',
+      },
+    });
+    console.log('UsersService.createUser created user:', user);
+    return user;
   }
 
 

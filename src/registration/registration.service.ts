@@ -5,10 +5,10 @@ import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class RegistrationService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   async register(dto: RegisterDto) {
-  console.log('RegistrationService.register DTO:', dto);
+    console.log('RegistrationService.register DTO:', dto);
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) throw new BadRequestException('Email already registered');
     console.log('RegistrationService.register raw password:', dto.password);

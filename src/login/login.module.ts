@@ -20,4 +20,4 @@ import { ConfigService } from '@nestjs/config';
   controllers: [LoginController],
   providers: [LoginService],
 })
-export class LoginModule {}
+export class LoginModule { }

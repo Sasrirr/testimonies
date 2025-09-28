@@ -9,7 +9,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
     const existing = await this.usersService.findByEmail(dto.email);
@@ -32,11 +32,11 @@ export class AuthService {
       email: user.email,
       role: user.role,
     };
-  // Always use the secret configured in JwtModule
-  const secret = this.jwtService['options']?.secret;
-  console.log('[AuthService] Signing JWT payload:', payload);
-  console.log('[AuthService] Signing with secret:', secret);
-  const accessToken = this.jwtService.sign(payload, { secret });
+    // Always use the secret configured in JwtModule
+    const secret = this.jwtService['options']?.secret;
+    console.log('[AuthService] Signing JWT payload:', payload);
+    console.log('[AuthService] Signing with secret:', secret);
+    const accessToken = this.jwtService.sign(payload, { secret });
     return {
       accessToken,
       userId: user.id,

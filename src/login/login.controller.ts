@@ -4,7 +4,7 @@ import { LoginDto } from './dto/login.dto';
 
 @Controller('api/v1/login')
 export class LoginController {
-  constructor(private readonly loginService: LoginService) {}
+  constructor(private readonly loginService: LoginService) { }
 
   @Post()
   async login(@Body() dto: LoginDto) {

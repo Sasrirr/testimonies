@@ -35,7 +35,7 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-  console.log('[JwtAuthGuard] Authorization header:', request.headers.authorization);
+    console.log('[JwtAuthGuard] Authorization header:', request.headers.authorization);
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
@@ -45,8 +45,8 @@ export class JwtAuthGuard implements CanActivate {
     try {
       if (process.env.NODE_ENV !== 'production') {
         // Local dev: verify with HS256 and secret
-  const secret = this.configService.get<string>('JWT_SECRET');
-  console.log('[JwtAuthGuard] Using secret for verification:', secret);
+        const secret = this.configService.get<string>('JWT_SECRET');
+        console.log('[JwtAuthGuard] Using secret for verification:', secret);
         const decodedHeader = this.jwtService.decode(token, { complete: true }) as any;
         console.log('[JwtAuthGuard] JWT Header:', decodedHeader?.header);
         const payload = this.jwtService.verify(token, {

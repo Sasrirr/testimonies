@@ -77,15 +77,16 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
       inject: [ConfigService],
     }),
 
-  // Core modules
-  // JwtModule should only be imported in AuthModule, not globally
-  PrismaModule,
-  CommonModule,
-  TestimoniesModule,
-  AuthModule,
-  RegistrationModule,
-  LoginModule,
-  require('./organizations/organizations.module').OrganizationsModule,
+    // Core modules
+    // JwtModule should only be imported in AuthModule, not globally
+    PrismaModule,
+    CommonModule,
+    TestimoniesModule,
+    AuthModule,
+    RegistrationModule,
+    LoginModule,
+    require('./organizations/organizations.module').OrganizationsModule,
+    require('./admin/admin.module').AdminModule,
   ],
   providers: [
     // Global guards
