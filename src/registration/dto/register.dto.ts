@@ -19,4 +19,14 @@ export class RegisterDto {
     @IsOptional()
     @IsString()
     role?: string | null;
+
+    @ApiProperty({ example: 'org-uuid', description: 'Organization ID (required for ADMIN role)', required: false })
+    @IsOptional()
+    @IsString()
+    organizationId?: string;
+
+    @ApiProperty({ example: 'ADMIN123', description: 'Admin request code (required for ADMIN role)', required: false })
+    @IsOptional()
+    @IsString()
+    adminRequestCode?: string;
 }

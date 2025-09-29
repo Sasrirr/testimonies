@@ -1,0 +1,153 @@
+# Test Org-Scoped Admin Model
+# This file demonstrates the organization-scoped admin functionality
+
+### Step 1: Register Organization A
+POST http://localhost:3000/api/api/v1/registration
+Content-Type: application/json
+
+{
+  "fullName": "OrgA Admin",
+  "email": "admin-orga@flocci.com",
+  "password": "password123",
+  "phone": "+1234567890",
+  "role": "ORGANIZATION"
+}
+
+### Step 2: Create Organization A
+POST http://localhost:3000/api/api/v1/organizations
+Content-Type: application/json
+Authorization: Bearer {{orgA_token}}
+
+{
+  "orgName": "Tech Solutions Inc",
+  "sector": "Technology",
+  "licenseId": "TECH001",
+  "contactInfo": {
+    "address": "123 Tech Street",
+    "city": "San Francisco"
+  }
+}
+
+### Step 3: Register Organization B
+POST http://localhost:3000/api/api/v1/registration
+Content-Type: application/json
+
+{
+  "fullName": "OrgB Admin", 
+  "email": "admin-orgb@flocci.com",
+  "password": "password123",
+  "phone": "+1234567891",
+  "role": "ORGANIZATION"
+}
+
+### Step 4: Create Organization B
+POST http://localhost:3000/api/api/v1/organizations
+Content-Type: application/json
+Authorization: Bearer {{orgB_token}}
+
+{
+  "orgName": "Healthcare Partners LLC",
+  "sector": "Healthcare",
+  "licenseId": "HEALTH001",
+  "contactInfo": {
+    "address": "456 Medical Blvd",
+    "city": "Boston"
+  }
+}
+
+### Step 5: Register Consumer
+POST http://localhost:3000/api/api/v1/registration
+Content-Type: application/json
+
+{
+  "fullName": "Test Consumer",
+  "email": "consumer@test.com",
+  "password": "password123",
+  "phone": "+1234567892",
+  "role": "CONSUMER"
+}
+
+### Step 6: Consumer Login
+POST http://localhost:3000/api/api/v1/login
+Content-Type: application/json
+
+{
+  "email": "consumer@test.com",
+  "password": "password123"
+}
+
+### Step 7: Consumer submits testimony about Organization A
+POST http://localhost:3000/api/api/v1/testimonies
+Content-Type: application/json
+Authorization: Bearer {{consumer_token}}
+
+{
+  "subjectId": "{{orgA_userId}}",
+  "content": "Excellent tech support and innovative solutions!",
+  "category": "SERVICE_QUALITY"
+}
+
+### Step 8: Consumer submits testimony about Organization B  
+POST http://localhost:3000/api/api/v1/testimonies
+Content-Type: application/json
+Authorization: Bearer {{consumer_token}}
+
+{
+  "subjectId": "{{orgB_userId}}",
+  "content": "Outstanding healthcare services and caring staff!",
+  "category": "SERVICE_QUALITY"
+}
+
+### === ORG-SCOPED ADMIN TESTING ===
+
+### Step 9: OrgA Admin Login
+POST http://localhost:3000/api/api/v1/login
+Content-Type: application/json
+
+{
+  "email": "admin-orga@flocci.com",
+  "password": "password123"
+}
+
+### Step 10: OrgA Admin - View Dashboard Stats (should only see OrgA data)
+GET http://localhost:3000/api/api/v1/admin/dashboard/stats
+Authorization: Bearer {{orgA_admin_token}}
+
+### Step 11: OrgA Admin - Get Pending Testimonies (should only see testimonies about OrgA)
+GET http://localhost:3000/api/api/v1/admin/testimonies/pending
+Authorization: Bearer {{orgA_admin_token}}
+
+### Step 12: OrgB Admin Login
+POST http://localhost:3000/api/api/v1/login
+Content-Type: application/json
+
+{
+  "email": "admin-orgb@flocci.com",
+  "password": "password123"
+}
+
+### Step 13: OrgB Admin - Get Pending Testimonies (should only see testimonies about OrgB)
+GET http://localhost:3000/api/api/v1/admin/testimonies/pending
+Authorization: Bearer {{orgB_admin_token}}
+
+### Step 14: OrgA Admin - Try to verify testimony about OrgA (should work)
+POST http://localhost:3000/api/api/v1/admin/verifications
+Content-Type: application/json
+Authorization: Bearer {{orgA_admin_token}}
+
+{
+  "testimonyId": "{{orgA_testimony_id}}",
+  "outcome": "VERIFIED",
+  "notes": "Verified by OrgA admin"
+}
+
+### Step 15: OrgA Admin - Try to verify testimony about OrgB (should fail with authorization error)
+POST http://localhost:3000/api/api/v1/admin/verifications  
+Content-Type: application/json
+Authorization: Bearer {{orgA_admin_token}}
+
+{
+  "testimonyId": "{{orgB_testimony_id}}",
+  "outcome": "VERIFIED", 
+  "notes": "Attempt to verify other org's testimony"
+}

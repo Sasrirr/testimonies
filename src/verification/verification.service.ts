@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { VerificationSource, TestimonyStatus } from '@prisma/client';
 import { CreateVerificationDto } from './dto/verification.dto';
@@ -15,7 +15,7 @@ export interface VerificationResult {
 
 @Injectable()
 export class VerificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Create a verification record and update testimony status
@@ -26,7 +26,14 @@ export class VerificationService {
     // Verify testimony exists and is pending
     const testimony = await this.prisma.testimony.findUnique({
       where: { id: testimonyId },
-      include: { author: true, subject: true }
+      include: {
+        author: true,
+        subject: {
+          include: {
+            organization: true
+          }
+        }
+      }
     });
 
     if (!testimony) {
@@ -37,13 +44,22 @@ export class VerificationService {
       throw new BadRequestException(`Testimony ${testimonyId} is not pending verification`);
     }
 
-    // Verify admin user exists
-    const admin = await this.prisma.user.findUnique({
-      where: { id: adminId }
+    // Verify admin user exists and get their organization
+    const adminRecord = await this.prisma.admin.findUnique({
+      where: { userId: adminId }
     });
 
-    if (!admin) {
+    if (!adminRecord) {
       throw new NotFoundException(`Admin user with ID ${adminId} not found`);
+    }
+
+    // ORG-SCOPED VALIDATION: Admin can only verify testimonies about their organization
+    if (testimony.subject.organization &&
+      (adminRecord as any).organizationId !== testimony.subject.organization.id) {
+      throw new BadRequestException(
+        `Admin can only verify testimonies about their organization. ` +
+        `Admin org: ${(adminRecord as any).organizationId}, Testimony subject org: ${testimony.subject.organization.id}`
+      );
     }
 
     // Determine new testimony status
@@ -53,8 +69,9 @@ export class VerificationService {
     switch (outcome) {
       case 'VERIFIED':
         newStatus = TestimonyStatus.VERIFIED;
-        // Generate QR code for verified testimonies
-        qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${testimony.embedId}`;
+        // Generate QR code pointing to public API endpoint
+        const testimonyUrl = `${process.env.API_BASE_URL || 'http://localhost:3000'}/api/v1/testimonies/embed/${testimony.embedId}`;
+        qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(testimonyUrl)}`;
         break;
       case 'REJECTED':
         newStatus = TestimonyStatus.REJECTED;
@@ -104,7 +121,76 @@ export class VerificationService {
   }
 
   /**
-   * Get verification history with optional filters
+   * Get verification history with optional filters (org-scoped)
+   */
+  async getVerificationHistoryByOrg(filters: {
+    adminUserId: string;
+    outcome?: TestimonyStatus;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }) {
+    // Get admin's organization
+    const adminRecord = await this.prisma.admin.findUnique({
+      where: { userId: filters.adminUserId }
+    });
+
+    if (!adminRecord) {
+      throw new NotFoundException('Admin not found');
+    }
+
+    const where: any = {
+      testimony: {
+        subject: {
+          organization: {
+            id: (adminRecord as any).organizationId
+          }
+        }
+      }
+    };
+
+    if (filters.outcome) {
+      where.outcome = filters.outcome;
+    }
+
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) {
+        where.createdAt.gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        where.createdAt.lte = filters.endDate;
+      }
+    }
+
+    return this.prisma.verification.findMany({
+      where,
+      include: {
+        testimony: {
+          select: {
+            id: true,
+            content: true,
+            category: true,
+            embedId: true,
+            author: { select: { fullName: true, email: true } },
+            subject: {
+              select: {
+                fullName: true,
+                email: true,
+                organization: { select: { orgName: true } }
+              }
+            }
+          }
+        },
+        verifiedBy: { select: { fullName: true, email: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: filters.limit,
+    });
+  }
+
+  /**
+   * Get verification history with optional filters (system-wide - legacy)
    */
   async getVerificationHistory(filters?: {
     adminId?: string;
@@ -191,14 +277,14 @@ export class VerificationService {
       pendingCount,
     ] = await Promise.all([
       this.prisma.verification.count({ where }),
-      this.prisma.verification.count({ 
-        where: { ...where, outcome: TestimonyStatus.VERIFIED } 
+      this.prisma.verification.count({
+        where: { ...where, outcome: TestimonyStatus.VERIFIED }
       }),
-      this.prisma.verification.count({ 
-        where: { ...where, outcome: TestimonyStatus.REJECTED } 
+      this.prisma.verification.count({
+        where: { ...where, outcome: TestimonyStatus.REJECTED }
       }),
-      this.prisma.verification.count({ 
-        where: { ...where, outcome: TestimonyStatus.PENDING } 
+      this.prisma.verification.count({
+        where: { ...where, outcome: TestimonyStatus.PENDING }
       }),
     ]);
 

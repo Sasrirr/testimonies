@@ -86,7 +86,7 @@ export class VerificationHistoryDto {
   @IsUUID()
   adminId?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Filter by outcome',
     enum: ['VERIFIED', 'REJECTED', 'PENDING']
   })
@@ -108,7 +108,7 @@ export class VerificationHistoryDto {
 }
 
 export class BulkVerificationDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Array of verification requests',
     type: [CreateVerificationDto]
   })

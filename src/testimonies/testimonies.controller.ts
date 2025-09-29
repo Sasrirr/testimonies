@@ -52,7 +52,7 @@ export class TestimoniesController {
     if (!userId) {
       throw new Error('User ID not found in JWT token');
     }
-    
+
     return this.testimoniesService.createTestimony(
       createTestimonyDto,
       userId,
@@ -84,6 +84,25 @@ export class TestimoniesController {
     @Param('businessId', ParseUUIDPipe) businessId: string,
   ): Promise<TestimonyResponseDto[]> {
     return this.testimoniesService.getTestimoniesByBusinessId(businessId);
+  }
+
+  @Get('embed/:embedId')
+  @ApiOperation({ summary: 'Get a testimony by embed ID (public access)' })
+  @ApiParam({
+    name: 'embedId',
+    description: 'Unique embed ID of the testimony',
+    example: 'abc123def456',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Testimony retrieved successfully',
+    type: EmbedTestimonyResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Testimony not found or not verified' })
+  async getPublicTestimonyByEmbedId(
+    @Param('embedId') embedId: string,
+  ): Promise<EmbedTestimonyResponseDto> {
+    return this.testimoniesService.getTestimonyByEmbedId(embedId);
   }
 
   @Get(':embedId')

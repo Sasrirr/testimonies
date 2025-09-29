@@ -36,15 +36,17 @@ model User {
 }
 
 model Organization {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String     @unique @map("user_id") @db.Uuid
-  orgName     String     @map("org_name") @db.VarChar(255)
-  sector      String?    @db.VarChar(100)
-  licenseId   String?    @map("license_id") @db.VarChar(100)
-  contactInfo Json?      @map("contact_info")
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String     @unique @map("user_id") @db.Uuid
+  orgName          String     @map("org_name") @db.VarChar(255)
+  sector           String?    @db.VarChar(100)
+  licenseId        String?    @map("license_id") @db.VarChar(100)
+  contactInfo      Json?      @map("contact_info")
+  adminRequestCode String     @default("LEGACY") @map("admin_request_code") @db.VarChar(20)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
   employees   Employee[]
+  admins      Admin[]
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("organizations")
@@ -65,10 +67,12 @@ model Employee {
 }
 
 model Admin {
-  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String @unique @map("user_id") @db.Uuid
-  permissions Json
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String       @unique @map("user_id") @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  permissions    Json
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("admins")
 }

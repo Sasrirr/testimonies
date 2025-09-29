@@ -64,7 +64,7 @@ describe('TestimoniesController', () => {
       expect(result).toBe(expectedResult);
       // Expect the service to be called with DTO and userId
       expect(service.createTestimony).toHaveBeenCalledWith(
-        createTestimonyDto, 
+        createTestimonyDto,
         '123e4567-e89b-12d3-a456-426614174000'
       );
     });

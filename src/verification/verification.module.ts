@@ -10,4 +10,4 @@ import { AuthModule } from '../auth/auth.module';
   providers: [VerificationService],
   exports: [VerificationService],
 })
-export class VerificationModule {}
+export class VerificationModule { }

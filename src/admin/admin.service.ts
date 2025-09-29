@@ -9,25 +9,122 @@ export class AdminService {
     private verificationService: VerificationService,
   ) { }
 
-  async getDashboardStats() {
-    // Example: count testimonies, organizations, users
-    const testimoniesCount = await this.prisma.testimony.count();
-    const organizationsCount = await this.prisma.organization.count();
-    const usersCount = await this.prisma.user.count();
-    return { testimoniesCount, organizationsCount, usersCount };
+  async getDashboardStats(adminUserId?: string) {
+    if (adminUserId) {
+      // Org-scoped stats for admin
+      const adminRecord = await this.prisma.admin.findUnique({
+        where: { userId: adminUserId }
+      });
+
+      if (!adminRecord) {
+        throw new BadRequestException('User is not an admin');
+      }
+
+      const orgId = (adminRecord as any).organizationId;
+
+      const testimoniesCount = await this.prisma.testimony.count({
+        where: { subject: { organization: { id: orgId } } }
+      });
+
+      const verifiedCount = await this.prisma.testimony.count({
+        where: {
+          status: 'VERIFIED',
+          subject: { organization: { id: orgId } }
+        }
+      });
+
+      const pendingCount = await this.prisma.testimony.count({
+        where: {
+          status: 'PENDING',
+          subject: { organization: { id: orgId } }
+        }
+      });
+
+      return {
+        testimoniesCount,
+        verifiedCount,
+        pendingCount,
+        organizationScope: true
+      };
+    } else {
+      // System-wide stats (fallback)
+      const testimoniesCount = await this.prisma.testimony.count();
+      const organizationsCount = await this.prisma.organization.count();
+      const usersCount = await this.prisma.user.count();
+      return { testimoniesCount, organizationsCount, usersCount };
+    }
   }
 
-  async getPendingTestimonies() {
-    // Fetch all testimonies with status PENDING
+  async getPendingTestimonies(adminUserId: string) {
+    // Get admin's organization info directly from admin table
+    const adminRecord = await this.prisma.admin.findUnique({
+      where: { userId: adminUserId }
+    });
+
+    if (!adminRecord) {
+      throw new BadRequestException('User is not an admin');
+    }
+
+    // Fetch testimonies that are about users in the admin's organization
     return await this.prisma.testimony.findMany({
-      where: { status: 'PENDING' },
+      where: {
+        status: 'PENDING',
+        subject: {
+          organization: {
+            id: (adminRecord as any).organizationId  // Type assertion for now
+          }
+        }
+      },
+      include: {
+        author: { select: { fullName: true, email: true } },
+        subject: {
+          select: {
+            fullName: true,
+            email: true,
+            organization: { select: { orgName: true } }
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async getVerificationHistory() {
-    // Fetch all verifications
+  async getVerificationHistory(adminUserId: string) {
+    // Get admin's organization info directly from admin table
+    const adminRecord = await this.prisma.admin.findUnique({
+      where: { userId: adminUserId }
+    });
+
+    if (!adminRecord) {
+      throw new BadRequestException('User is not an admin');
+    }
+
+    // Fetch verifications only for testimonies about the admin's organization
     return await this.prisma.verification.findMany({
+      where: {
+        testimony: {
+          subject: {
+            organization: {
+              id: (adminRecord as any).organizationId  // Type assertion for now
+            }
+          }
+        }
+      },
+      include: {
+        testimony: {
+          include: {
+            author: { select: { fullName: true, email: true } },
+            subject: {
+              select: {
+                fullName: true,
+                email: true,
+                organization: { select: { orgName: true } }
+              }
+            }
+          }
+        },
+        verifiedBy: { select: { fullName: true, email: true } }
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

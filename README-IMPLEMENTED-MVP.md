@@ -4,7 +4,13 @@
 
 This document reflects the **actual implemented system** - not theoretical specs, but the working MVP we've built and tested. Every endpoint, workflow, and feature documented here has been validated through real API testing.
 
-> **Core Workflow Validated**: Consumer submits testimony → Admin verifies → Organization gets embeddable verified testimony with QR code and audit trail.
+## Core MVP Implementation
+
+> **MVP Status**: ✅ **COMPLETE** (Org-Scoped Model)  
+> **Verification Workflow**: ✅ **FUNCTIONAL** (Organization-Level Admin Authority)  
+> **QR Code Generation**: ✅ **WORKING**  
+> **Core Workflow Validated**: Consumer submits testimony → Organization Admin verifies → Organization gets embeddable verified testimony with QR code and audit trail.
+> **Administrative Model**: Each organization has its own admins who can only verify testimonies about their organization.
 
 ## 🏗️ Actual System Architecture
 
@@ -16,13 +22,23 @@ This document reflects the **actual implemented system** - not theoretical specs
 - **Embed System**: Unique `embedId` per testimony
 - **Audit Trail**: Dedicated Verification Module with complete logging
 - **Modular Architecture**: Separated concerns with dedicated verification service
+- **Org-Scoped Administration**: Each organization has its own admins with limited authority
+
+### Administrative Model (Organization-Scoped + Secure Registration)
+- **Authority**: Admins can only verify testimonies about their own organization
+- **Registration Security**: Admin registration requires organizationId + valid adminRequestCode
+- **Admin Limits**: Maximum 3 admins per organization (org creator + 2 additional)
+- **Validation**: All admin operations include org-level authorization checks  
+- **Scope**: Dashboard stats, pending testimonies, and verification history are filtered by organization
+- **Security**: Admin user ID extracted from JWT, organizationId enforced at service layer
 
 ### Database Schema (Actual Implementation)
 ```sql
 -- Core entities as implemented
 User (id, fullName, email, phone, profilePhotoUrl, role, status, password, createdAt, updatedAt)
 Organization (id, userId, orgName, sector, licenseId, contactInfo, createdAt, updatedAt)
-Admin (id, userId, permissions)
+Admin (id, userId, organizationId, permissions)
+Organization (id, userId, orgName, sector, licenseId, contactInfo, adminRequestCode, createdAt, updatedAt)
 Testimony (id, authorId, subjectId, content, category, mediaUrl, sentiment, status, qrCodeUrl, embedId, createdAt, updatedAt)
 Verification (id, testimonyId, verifiedById, outcome, notes, proofType, proofData, source, createdAt)
 ```
@@ -59,19 +75,19 @@ Authorization: Bearer <jwt-token>
 }
 ```
 
-### 3. Admin Journey (TESTED ✅)
+### 3. Admin Journey (TESTED ✅) - Organization Scoped
 ```http
-# Login as admin
+# Login as organization admin
 POST /api/api/v1/login
 {
-  "email": "admin@example.com",
+  "email": "admin@myorg.com", 
   "password": "adminpassword"
 }
 
-# View system stats
+# View organization-specific stats (only for admin's org)
 GET /api/api/v1/admin/dashboard/stats
 
-# Get pending testimonies
+# Get pending testimonies (only for admin's organization)
 GET /api/api/v1/admin/testimonies/pending
 
 # THE CORE ACTION: Verify testimony
@@ -175,7 +191,9 @@ GET  /api/api/v1/organizations/me/testimonies/verified - Verified testimonies
 
 ### Public Endpoints
 ```
-GET  /api/api/v1/testimonies/embed/{embedId}  - Public testimony access
+### Public Endpoints
+
+GET  /api/v1/testimonies/embed/{embedId}  - Public testimony access (no auth required) ✅
 ```
 
 ## 🔥 Implemented Business Logic
@@ -200,7 +218,8 @@ async createVerification(dto: CreateVerificationDto): Promise<VerificationResult
   // 2. Determine outcome and generate QR code if verified
   let qrCodeUrl = null;
   if (dto.outcome === 'VERIFIED') {
-    qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${testimony.embedId}`;
+    const testimonyUrl = `${process.env.FRONTEND_URL}/testimony/${testimony.embedId}`;
+    qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(testimonyUrl)}`;
   }
   
   // 3. Transaction: Update testimony + Create verification record
@@ -236,11 +255,13 @@ async createVerification(dto: CreateVerificationDto): Promise<VerificationResult
 }
 ```
 
-### QR Code Implementation (Current Strategy)
+### QR Code Implementation (External Service Strategy)
 **Current Approach**: External QR generation service for space efficiency
 - QR codes generated **on-demand** via `https://api.qrserver.com/v1/create-qr-code/`
+- **QR Content**: Direct API URLs (e.g., `{API_BASE_URL}/api/v1/testimonies/embed/abc123def456`) 
 - **Database storage**: Only URL strings (~80 bytes per QR)
-- **User experience**: Frontend receives QR URL → Browser fetches image from external service
+- **User experience**: Scan QR → Direct API endpoint returns testimony JSON (public access)
+- **Frontend delivery**: Receives QR URL → Browser fetches image from external service  
 - **Alternative ready**: Internal `QrCodeService` available for future base64/file-based generation
 - **Trade-off**: Minimal storage vs external service dependency (chosen for MVP constraints)
 

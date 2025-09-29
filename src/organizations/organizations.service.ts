@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -42,15 +42,93 @@ export class OrganizationsService {
 
   async createOrganization(dto: any) {
     // dto: { orgName, userId, sector?, licenseId?, contactInfo? }
-    return await this.prisma.organization.create({
+
+    // Generate simple admin request code (6 chars for easy testing)
+    const adminRequestCode = this.generateAdminRequestCode();
+
+    const organization = await this.prisma.organization.create({
       data: {
         orgName: dto.orgName,
         userId: dto.userId,
         sector: dto.sector,
         licenseId: dto.licenseId,
         contactInfo: dto.contactInfo,
-      },
+        adminRequestCode: adminRequestCode,
+      } as any,
     });
+
+    // Auto-create admin record for organization creator (first admin)
+    await this.prisma.admin.create({
+      data: {
+        userId: dto.userId,
+        organizationId: organization.id,
+        permissions: { verify: true, manage: true, primary: true },
+      } as any,
+    });
+
+    return {
+      ...organization,
+      adminRequestCode: adminRequestCode, // Return code to organization creator
+    };
+  }
+
+  async getAdminCode(userId: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { userId },
+      select: { adminRequestCode: true, orgName: true } as any
+    });
+
+    if (!organization) {
+      throw new BadRequestException('Organization not found');
+    }
+
+    return {
+      adminRequestCode: (organization as any).adminRequestCode,
+      organizationName: organization.orgName,
+      message: 'Share this code with trusted users to allow them to register as admins'
+    };
+  }
+
+  async regenerateAdminCode(userId: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { userId }
+    });
+
+    if (!organization) {
+      throw new BadRequestException('Organization not found');
+    }
+
+    const newAdminCode = this.generateAdminRequestCode();
+
+    const updated = await this.prisma.organization.update({
+      where: { userId },
+      data: { adminRequestCode: newAdminCode } as any,
+      select: { adminRequestCode: true, orgName: true }
+    });
+
+    return {
+      newAdminRequestCode: (updated as any).adminRequestCode,
+      organizationName: updated.orgName,
+      message: 'Admin request code regenerated successfully. Previous code is no longer valid.'
+    };
+  }
+
+  private generateAdminRequestCode(): string {
+    // Simple 6-character code for easy testing: ABC123 format
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+
+    let code = '';
+    // 3 letters
+    for (let i = 0; i < 3; i++) {
+      code += letters.charAt(Math.floor(Math.random() * letters.length));
+    }
+    // 3 numbers
+    for (let i = 0; i < 3; i++) {
+      code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    }
+
+    return code;
   }
 
   async getOrganizationById(id: string) {

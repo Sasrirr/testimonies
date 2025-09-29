@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-// ...existing code...
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
 
@@ -9,8 +9,11 @@ import { OrganizationsService } from './organizations.service';
 export class OrganizationsController {
   @Post()
   @UseGuards(JwtAuthGuard)
-  createOrganization(@Body() dto: any) {
-    return this.organizationsService.createOrganization(dto);
+  createOrganization(@Body() dto: any, @CurrentUser() user: any) {
+    return this.organizationsService.createOrganization({
+      ...dto,
+      userId: user.userId
+    });
   }
 
   @Get(':id')
@@ -55,5 +58,21 @@ export class OrganizationsController {
   @ApiResponse({ status: 200, description: 'Verified testimonies with embed codes retrieved successfully' })
   getVerifiedOrganizationTestimonies(@Query('orgId') orgId: string) {
     return this.organizationsService.getVerifiedOrganizationTestimonies(orgId);
+  }
+
+  @Get('me/admin-code')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get organization admin request code' })
+  @ApiResponse({ status: 200, description: 'Admin request code retrieved successfully' })
+  getAdminCode(@CurrentUser() user: any) {
+    return this.organizationsService.getAdminCode(user.userId);
+  }
+
+  @Post('me/admin-code/regenerate')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Regenerate organization admin request code' })
+  @ApiResponse({ status: 200, description: 'Admin request code regenerated successfully' })
+  regenerateAdminCode(@CurrentUser() user: any) {
+    return this.organizationsService.regenerateAdminCode(user.userId);
   }
 }

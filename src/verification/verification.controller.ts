@@ -5,13 +5,14 @@ import { CreateVerificationDto } from './dto/verification.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { TestimonyStatus } from '@prisma/client';
 
 @ApiTags('verification')
 @Controller('api/v1/verification')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VerificationController {
-  constructor(private readonly verificationService: VerificationService) {}
+  constructor(private readonly verificationService: VerificationService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a verification record (Admin only)' })
@@ -21,24 +22,28 @@ export class VerificationController {
   @Roles('ADMIN')
   async createVerification(
     @Body(ValidationPipe) createVerificationDto: CreateVerificationDto,
+    @CurrentUser() user: any,
   ) {
-    return this.verificationService.createVerification(createVerificationDto);
+    // Use the adminId from JWT instead of DTO for security
+    return this.verificationService.createVerification({
+      ...createVerificationDto,
+      adminId: user.userId
+    });
   }
 
   @Get('history')
-  @ApiOperation({ summary: 'Get verification history (Admin only)' })
-  @ApiQuery({ name: 'adminId', required: false, description: 'Filter by admin ID' })
+  @ApiOperation({ summary: 'Get verification history for admin\'s organization (Admin only)' })
   @ApiQuery({ name: 'outcome', required: false, enum: TestimonyStatus, description: 'Filter by outcome' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit number of results' })
   @ApiResponse({ status: 200, description: 'Verification history retrieved successfully' })
   @Roles('ADMIN')
   async getVerificationHistory(
-    @Query('adminId') adminId?: string,
+    @CurrentUser() user: any,
     @Query('outcome') outcome?: TestimonyStatus,
     @Query('limit') limit?: number,
   ) {
-    return this.verificationService.getVerificationHistory({
-      adminId,
+    return this.verificationService.getVerificationHistoryByOrg({
+      adminUserId: user.userId,
       outcome,
       limit: limit ? Number(limit) : undefined,
     });

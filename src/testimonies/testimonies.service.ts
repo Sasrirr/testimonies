@@ -62,13 +62,13 @@ export class TestimoniesService {
 
       // Debug: Let's verify both users exist before creating testimony
       console.log('DEBUG - Creating testimony with:', { authorId, subjectId });
-      
+
       const author = await this.prisma.user.findUnique({ where: { id: authorId } });
       const subjectUser = await this.prisma.user.findUnique({ where: { id: subjectId } });
-      
+
       console.log('DEBUG - Author found:', !!author, author?.fullName);
       console.log('DEBUG - Subject found:', !!subjectUser, subjectUser?.fullName);
-      
+
       if (!author) throw new Error(`Author not found: ${authorId}`);
       if (!subjectUser) throw new Error(`Subject not found: ${subjectId}`);
 
