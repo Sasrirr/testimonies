@@ -69,8 +69,8 @@ export class TestimoniesService {
       console.log('DEBUG - Author found:', !!author, author?.fullName);
       console.log('DEBUG - Subject found:', !!subjectUser, subjectUser?.fullName);
 
-      if (!author) throw new Error(`Author not found: ${authorId}`);
-      if (!subjectUser) throw new Error(`Subject not found: ${subjectId}`);
+      if (!author) throw new NotFoundException(`Author not found: ${authorId}`);
+      if (!subjectUser) throw new NotFoundException(`Subject not found: ${subjectId}`);
 
       const testimony = await this.prisma.testimony.create({
         data: { authorId, subjectId, content, category, mediaUrl, embedId, status: TestimonyStatus.PENDING },
@@ -92,6 +92,10 @@ export class TestimoniesService {
 
     } catch (err) {
       console.error('createTestimony error:', err);
+      // Re-throw NotFoundException as-is, convert others to BadRequestException
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
       throw new BadRequestException(err.message || 'Internal server error');
     }
   }

@@ -3,6 +3,7 @@ import { TestimoniesController } from './testimonies.controller';
 import { TestimoniesService } from './testimonies.service';
 import { CreateTestimonyDto } from './dto/testimony.dto';
 import { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 describe('TestimoniesController', () => {
   let controller: TestimoniesController;
@@ -25,6 +26,10 @@ describe('TestimoniesController', () => {
           useValue: mockTestimoniesService,
         },
       ],
+    })
+    .overrideGuard(JwtAuthGuard)
+    .useValue({
+      canActivate: jest.fn(() => true),
     }).compile();
 
     controller = module.get<TestimoniesController>(TestimoniesController);

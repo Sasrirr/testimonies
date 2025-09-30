@@ -88,6 +88,13 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1",
+      "^jwks-client$": "<rootDir>/__mocks__/jwks-client.js"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(jwks-client)/)"
+    ]
   }
 }

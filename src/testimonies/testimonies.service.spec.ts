@@ -17,6 +17,7 @@ describe('TestimoniesService', () => {
   const mockPrismaService = {
     user: {
       findUnique: jest.fn(),
+      create: jest.fn(),
     },
     testimony: {
       create: jest.fn(),
@@ -109,7 +110,10 @@ describe('TestimoniesService', () => {
     });
 
     it('should throw NotFoundException if subject not found', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      // Mock author found, subject not found
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce({ id: authorId, fullName: 'Author Name' }) // First call for author
+        .mockResolvedValueOnce(null); // Second call for subject
 
       await expect(
         service.createTestimony(createTestimonyDto, authorId)
