@@ -107,6 +107,115 @@ export class InteractionsService {
   }
 
   /**
+   * Get interactions for a user
+   */
+  async getInteractionsByUser(
+    userId: string,
+    interactionType?: InteractionType,
+  ): Promise<InteractionResponseDto[]> {
+    const where: any = {
+      targetType: 'USER',
+      targetId: userId,
+    };
+
+    if (interactionType) {
+      where.interaction = interactionType;
+    }
+
+    const interactions = await this.prisma.interaction.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return interactions.map(this.mapToInteractionResponse);
+  }
+
+  /**
+   * Get interactions for an organization
+   */
+  async getInteractionsByOrganization(
+    organizationId: string,
+    interactionType?: InteractionType,
+  ): Promise<InteractionResponseDto[]> {
+    const where: any = {
+      targetType: 'ORGANIZATION',
+      targetId: organizationId,
+    };
+
+    if (interactionType) {
+      where.interaction = interactionType;
+    }
+
+    const interactions = await this.prisma.interaction.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return interactions.map(this.mapToInteractionResponse);
+  }
+
+  /**
+   * Get interactions created by a specific user
+   */
+  async getUserInteractions(
+    userId: string,
+    interactionType?: InteractionType,
+    targetType?: string,
+  ): Promise<InteractionResponseDto[]> {
+    const where: any = {
+      userId,
+    };
+
+    if (interactionType) {
+      where.interaction = interactionType;
+    }
+
+    if (targetType) {
+      where.targetType = targetType;
+    }
+
+    const interactions = await this.prisma.interaction.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return interactions.map(this.mapToInteractionResponse);
+  }
+
+  /**
    * Get interaction statistics for a target
    */
   async getInteractionStats(targetType: string, targetId: string) {
