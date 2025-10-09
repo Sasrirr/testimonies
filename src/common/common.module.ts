@@ -3,8 +3,12 @@ import { AuditLogService } from './services/audit-log.service';
 import { QrCodeService } from './services/qr-code.service';
 import { EmbedIdService } from './services/embed-id.service';
 import { ReputationService } from './services/reputation.service';
+import { QrCodeController } from './controllers/qr-code.controller';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
+  imports: [PrismaModule],
+  controllers: [QrCodeController],
   providers: [
     AuditLogService,
     QrCodeService,
@@ -18,4 +22,4 @@ import { ReputationService } from './services/reputation.service';
     ReputationService,
   ],
 })
-export class CommonModule {}
+export class CommonModule { }

@@ -1,17 +1,20 @@
-import { Controller, Post, Patch, Get, Param, Body, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Patch, Get, Param, Body, Req, ForbiddenException, UseGuards } from '@nestjs/common';
 import { TestimoniesService } from './testimonies.service';
+import { JwtAuthGuard, JwtPayload } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('disputes')
 export class DisputesController {
     constructor(private readonly testimoniesService: TestimoniesService) { }
 
     @Post(':id/raise')
+    @UseGuards(JwtAuthGuard)
     async raiseDispute(
         @Param('id') testimonyId: string,
         @Body('reason') reason: string,
+        @CurrentUser() user: JwtPayload,
     ) {
-        const placeholderUserId = 'public-user'; // or any default string
-        return this.testimoniesService.raiseDispute(testimonyId, placeholderUserId, reason);
+        return this.testimoniesService.raiseDispute(testimonyId, user.userId, reason);
     }
 
     @Patch(':id/resolve')

@@ -38,39 +38,22 @@ export class TestimoniesService {
 
       if (!subjectId) throw new BadRequestException('subjectId is required');
 
-      let subject = await this.prisma.user.findUnique({ where: { id: subjectId } });
+      // Validate that both author and subject exist
+      const [author, subject] = await Promise.all([
+        this.prisma.user.findUnique({ where: { id: authorId } }),
+        this.prisma.user.findUnique({ where: { id: subjectId } })
+      ]);
 
-      if (!subject) {
-        if (process.env.NODE_ENV === 'production') {
-          throw new NotFoundException('Subject user not found');
-        } else {
-          subject = await this.prisma.user.create({
-            data: {
-              id: subjectId,
-              fullName: 'Placeholder User',
-              email: `${subjectId}@placeholder.local`,
-              role: UserRole.CONSUMER,
-              password: 'placeholder-password', // Add placeholder password
-            },
-          });
-        }
+      if (!author) {
+        throw new NotFoundException(`Author user not found: ${authorId}`);
       }
-
+      
+      if (!subject) {
+        throw new NotFoundException(`Subject user not found: ${subjectId}. Please ensure the user is registered in the system.`);
+      }
 
       const embedId = await this.embedIdService.generateUniqueEmbedId();
       if (!embedId) throw new Error('Failed to generate embedId');
-
-      // Debug: Let's verify both users exist before creating testimony
-      console.log('DEBUG - Creating testimony with:', { authorId, subjectId });
-
-      const author = await this.prisma.user.findUnique({ where: { id: authorId } });
-      const subjectUser = await this.prisma.user.findUnique({ where: { id: subjectId } });
-
-      console.log('DEBUG - Author found:', !!author, author?.fullName);
-      console.log('DEBUG - Subject found:', !!subjectUser, subjectUser?.fullName);
-
-      if (!author) throw new NotFoundException(`Author not found: ${authorId}`);
-      if (!subjectUser) throw new NotFoundException(`Subject not found: ${subjectId}`);
 
       const testimony = await this.prisma.testimony.create({
         data: { authorId, subjectId, content, category, mediaUrl, embedId, status: TestimonyStatus.PENDING },

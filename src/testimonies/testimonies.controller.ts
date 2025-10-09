@@ -20,7 +20,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { TestimoniesService } from './testimonies.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard, JwtPayload } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import {
   CreateTestimonyDto,
   UpdateTestimonyDto,
@@ -140,18 +141,12 @@ export class TestimoniesController {
   async updateTestimony(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(ValidationPipe) updateTestimonyDto: UpdateTestimonyDto,
+    @CurrentUser() user: JwtPayload,
   ): Promise<TestimonyResponseDto> {
-    // Replace placeholder with actual user from JWT payload
-    // ...existing code...
-    const placeholderUser = {
-      userId: 'public-user',
-      role: UserRole.CONSUMER,
-      email: 'public-user@flocci.in',
-    };
     return this.testimoniesService.updateTestimony(
       id,
       updateTestimonyDto,
-      placeholderUser,
+      user,
     );
   }
 
@@ -165,15 +160,9 @@ export class TestimoniesController {
   @UseGuards(JwtAuthGuard)
   async deleteTestimony(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<void> {
-    // Replace placeholder with actual user from JWT payload
-    // ...existing code...
-    const placeholderUser = {
-      userId: 'public-user',
-      role: UserRole.ADMIN,
-      email: 'public-user@flocci.in',
-    };
-    return this.testimoniesService.deleteTestimony(id, placeholderUser);
+    return this.testimoniesService.deleteTestimony(id, user);
   }
 
   @Get('pending/list')

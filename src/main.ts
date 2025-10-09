@@ -89,6 +89,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     require('./admin/admin.module').AdminModule,
     require('./verification/verification.module').VerificationModule,
     require('./interactions/interactions.module').InteractionsModule,
+    require('./analytics/analytics.module').AnalyticsModule,
   ],
   providers: [
     // Global guards
@@ -115,17 +116,8 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
-  // Dev-only global allow-all guard to bypass auth/roles during local development / Swagger testing.
-  // IMPORTANT: Remove or guard this behind NODE_ENV !== 'development' before deploying to production.
-  if (process.env.NODE_ENV !== 'production') {
-    const DevAllowAllGuard: CanActivate = {
-      canActivate(_context: ExecutionContext) {
-        return true;
-      },
-    };
-    // This will run in addition to any APP_GUARD providers (e.g. ThrottlerGuard).
-    app.useGlobalGuards(DevAllowAllGuard);
-  }
+  // Authentication is enforced through JWT guards at controller level
+  // No global bypass guards for production security
 
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
@@ -157,8 +149,8 @@ async function bootstrap() {
   if (configService.get('NODE_ENV') !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Flocci Testimonies API')
-      .setDescription('Global trusted ledger for verifiable testimonials')
-      .setVersion('1.0')
+      .setDescription('Global trusted ledger for verifiable testimonials - Production Ready Demo')
+      .setVersion('2.0')
       .addBearerAuth({
         type: 'http',
         scheme: 'bearer',
@@ -171,6 +163,7 @@ async function bootstrap() {
       .addTag('organizations', 'Organization management')
       .addTag('admin', 'Administrative operations')
       .addTag('interactions', 'User interactions with testimonies')
+      .addTag('analytics', 'System analytics and metrics')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
