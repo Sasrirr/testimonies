@@ -9,7 +9,7 @@ export class InteractionsService {
   constructor(
     private prisma: PrismaService,
     private auditLogService: AuditLogService,
-  ) {}
+  ) { }
 
   /**
    * Create a new interaction
@@ -242,7 +242,7 @@ export class InteractionsService {
     stats.forEach(stat => {
       const count = stat._count.interaction;
       result.total += count;
-      
+
       switch (stat.interaction) {
         case InteractionType.LIKE:
           result.likes = count;
@@ -317,7 +317,7 @@ export class InteractionsService {
           throw new NotFoundException('Testimony not found');
         }
         break;
-      
+
       case 'USER':
         const user = await this.prisma.user.findUnique({
           where: { id: targetId },
@@ -327,7 +327,7 @@ export class InteractionsService {
           throw new NotFoundException('User not found');
         }
         break;
-      
+
       case 'ORGANIZATION':
         const organization = await this.prisma.organization.findUnique({
           where: { id: targetId },
@@ -337,7 +337,7 @@ export class InteractionsService {
           throw new NotFoundException('Organization not found');
         }
         break;
-      
+
       default:
         throw new BadRequestException('Invalid target type');
     }

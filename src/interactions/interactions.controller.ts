@@ -29,16 +29,16 @@ import { InteractionType } from '@prisma/client';
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 export class InteractionsController {
-  constructor(private readonly interactionsService: InteractionsService) {}
+  constructor(private readonly interactionsService: InteractionsService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create a new interaction',
     description: 'Create interactions like likes, comments, flags on testimonies, users, or organizations'
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Interaction created successfully',
     type: InteractionResponseDto
   })
@@ -52,19 +52,19 @@ export class InteractionsController {
   }
 
   @Get('testimony/:testimonyId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get interactions for a testimony',
     description: 'Retrieve all interactions (likes, comments, flags) for a specific testimony'
   })
   @ApiParam({ name: 'testimonyId', description: 'UUID of the testimony' })
-  @ApiQuery({ 
-    name: 'type', 
-    required: false, 
+  @ApiQuery({
+    name: 'type',
+    required: false,
     enum: InteractionType,
     description: 'Filter by interaction type'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Interactions retrieved successfully',
     type: [InteractionResponseDto]
   })
@@ -76,19 +76,19 @@ export class InteractionsController {
   }
 
   @Get('user/:userId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get interactions for a user',
     description: 'Retrieve all interactions directed at a specific user'
   })
   @ApiParam({ name: 'userId', description: 'UUID of the user' })
-  @ApiQuery({ 
-    name: 'type', 
-    required: false, 
+  @ApiQuery({
+    name: 'type',
+    required: false,
     enum: InteractionType,
     description: 'Filter by interaction type'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'User interactions retrieved successfully',
     type: [InteractionResponseDto]
   })
@@ -100,19 +100,19 @@ export class InteractionsController {
   }
 
   @Get('organization/:organizationId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get interactions for an organization',
     description: 'Retrieve all interactions directed at a specific organization'
   })
   @ApiParam({ name: 'organizationId', description: 'UUID of the organization' })
-  @ApiQuery({ 
-    name: 'type', 
-    required: false, 
+  @ApiQuery({
+    name: 'type',
+    required: false,
     enum: InteractionType,
     description: 'Filter by interaction type'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Organization interactions retrieved successfully',
     type: [InteractionResponseDto]
   })
@@ -124,14 +124,14 @@ export class InteractionsController {
   }
 
   @Get('stats/:targetType/:targetId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get interaction statistics',
     description: 'Get aggregated statistics for interactions on a specific target'
   })
   @ApiParam({ name: 'targetType', enum: ['TESTIMONY', 'USER', 'ORGANIZATION'] })
   @ApiParam({ name: 'targetId', description: 'UUID of the target entity' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Interaction statistics retrieved successfully',
     schema: {
       type: 'object',
@@ -153,24 +153,24 @@ export class InteractionsController {
   }
 
   @Get('my-interactions')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get current user\'s interactions',
     description: 'Retrieve all interactions created by the current user'
   })
-  @ApiQuery({ 
-    name: 'type', 
-    required: false, 
+  @ApiQuery({
+    name: 'type',
+    required: false,
     enum: InteractionType,
     description: 'Filter by interaction type'
   })
-  @ApiQuery({ 
-    name: 'targetType', 
-    required: false, 
+  @ApiQuery({
+    name: 'targetType',
+    required: false,
     enum: ['TESTIMONY', 'USER', 'ORGANIZATION'],
     description: 'Filter by target type'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'User interactions retrieved successfully',
     type: [InteractionResponseDto]
   })
@@ -180,15 +180,15 @@ export class InteractionsController {
     @Query('targetType') targetType?: string,
   ): Promise<InteractionResponseDto[]> {
     return this.interactionsService.getUserInteractions(
-      user.userId, 
-      interactionType, 
+      user.userId,
+      interactionType,
       targetType
     );
   }
 
   @Delete(':targetType/:targetId/:interactionType')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Remove an interaction',
     description: 'Remove a specific interaction (unlike, unshare, etc.)'
   })

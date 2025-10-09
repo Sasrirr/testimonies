@@ -27,10 +27,10 @@ describe('TestimoniesController', () => {
         },
       ],
     })
-    .overrideGuard(JwtAuthGuard)
-    .useValue({
-      canActivate: jest.fn(() => true),
-    }).compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: jest.fn(() => true),
+      }).compile();
 
     controller = module.get<TestimoniesController>(TestimoniesController);
     service = module.get<TestimoniesService>(TestimoniesService);

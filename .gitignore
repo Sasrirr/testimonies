@@ -44,3 +44,7 @@ dist
 
 # Original MVP documentation (replaced with README-IMPLEMENTED-MVP.md)
 README-MVP.md
+
+# Development & Testing Documentation (session-specific)
+TEST-CREDENTIALS.md
+WORK-SESSION-STATUS.md
