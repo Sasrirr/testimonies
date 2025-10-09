@@ -89,7 +89,6 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     require('./admin/admin.module').AdminModule,
     require('./verification/verification.module').VerificationModule,
     require('./interactions/interactions.module').InteractionsModule,
-    require('./analytics/analytics.module').AnalyticsModule,
   ],
   providers: [
     // Global guards
@@ -163,7 +162,6 @@ async function bootstrap() {
       .addTag('organizations', 'Organization management')
       .addTag('admin', 'Administrative operations')
       .addTag('interactions', 'User interactions with testimonies')
-      .addTag('analytics', 'System analytics and metrics')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
