@@ -99,44 +99,44 @@ The service uses the following core entities:
 - **CONSUMER**: Create/manage own testimonies, interact with others
 - **ORGANIZATION**: Manage profile, view testimonies about them
 - **EMPLOYEE**: View organization data, respond to testimonies
-- **ADMIN**: Full access for verification and moderation
+- **ADMIN**: Full access for verification and moderation; implemented as org-scoped admins (each admin can only verify testimonies for their organization).
 
 ## 📡 API Endpoints
 
 ### Core Testimony Operations
 
 ```http
-POST   /api/v1/testimonies              # Create testimony (CONSUMER)
-GET    /api/v1/testimonies/:embed_id    # Get public testimony
-PUT    /api/v1/testimonies/:id          # Update testimony (author only)
-DELETE /api/v1/testimonies/:id          # Delete testimony (author/admin)
+POST   /api/api/v1/testimonies              # Create testimony (CONSUMER)
+GET    /api/api/v1/testimonies/:embed_id    # Get public testimony
+PUT    /api/api/v1/testimonies/:id          # Update testimony (author only)
+DELETE /api/api/v1/testimonies/:id          # Delete testimony (author/admin)
 ```
 
 ### User & Organization Management
 
 ```http
-GET    /api/v1/users/:userId/testimonies     # Get user's testimonies
-GET    /api/v1/organizations/:id             # Get organization profile
-PUT    /api/v1/organizations/:id             # Update organization
-POST   /api/v1/organizations/:id/employees   # Add employee
-DELETE /api/v1/organizations/:orgId/employees/:userId # Remove employee
+GET    /api/api/v1/users/:userId/testimonies     # Get user's testimonies
+GET    /api/api/v1/organizations/:id             # Get organization profile
+PUT    /api/api/v1/organizations/:id             # Update organization
+POST   /api/api/v1/organizations/:id/employees   # Add employee
+DELETE /api/api/v1/organizations/:orgId/employees/:userId # Remove employee
 ```
 
 ### Interactions
 
 ```http
-POST   /api/v1/interactions                 # Create interaction (like, comment)
-GET    /api/v1/testimonies/:id/interactions # Get testimony interactions
+POST   /api/api/v1/interactions                 # Create interaction (like, comment)
+GET    /api/api/v1/testimonies/:id/interactions # Get testimony interactions
 ```
 
 ### Admin Operations
 
 ```http
-GET    /api/v1/testimonies/pending          # Get pending testimonies (ADMIN)
-POST   /api/v1/verifications                # Verify/reject testimony (ADMIN)
-POST   /api/v1/moderations                  # Moderate content (ADMIN)
-GET    /api/v1/disputes                     # View disputes (ADMIN)
-PUT    /api/v1/disputes/:id/resolve         # Resolve dispute (ADMIN)
+GET    /api/api/v1/testimonies/pending          # Get pending testimonies (ADMIN)
+POST   /api/api/v1/verifications                # Verify/reject testimony (ADMIN)
+POST   /api/api/v1/moderations                  # Moderate content (ADMIN)
+GET    /api/api/v1/disputes                     # View disputes (ADMIN)
+PUT    /api/api/v1/disputes/:id/resolve         # Resolve dispute (ADMIN)
 ```
 
 ## 🏗️ Core Business Logic

@@ -30,7 +30,7 @@ Verifications (id, testimonyId, verifiedById, outcome, notes)
 
 ### 1. Consumer Journey
 ```http
-POST /api/v1/testimonies
+POST /api/api/v1/testimonies
 Authorization: Bearer <jwt-token>
 {
   "subjectOrganizationId": "org-uuid",
@@ -41,10 +41,10 @@ Authorization: Bearer <jwt-token>
 ### 2. Admin Journey (The Core of MVP)
 ```http
 # Get pending testimonies
-GET /api/v1/admin/testimonies/pending?page=1&limit=10
+GET /api/api/v1/admin/testimonies/pending?page=1&limit=10
 
 # Verify testimony (THE CRITICAL ACTION)
-POST /api/v1/admin/verifications
+POST /api/api/v1/admin/verifications
 {
   "testimonyId": "testimony-uuid",
   "outcome": "VERIFIED",
@@ -55,19 +55,19 @@ POST /api/v1/admin/verifications
 ### 3. Organization Journey
 ```http
 # View dashboard with stats
-GET /api/v1/organizations/me
+GET /api/api/v1/organizations/me
 
 # Get all testimonies about organization
-GET /api/v1/organizations/me/testimonies
+GET /api/api/v1/organizations/me/testimonies
 
 # Get verified testimonies with embed codes
-GET /api/v1/organizations/me/testimonies/verified
+GET /api/api/v1/organizations/me/testimonies/verified
 ```
 
 ### 4. Public Embed (The Money Endpoint 💰)
 ```http
 # No authentication required - this is the public-facing endpoint
-GET /api/v1/testimonies/embed/{embedId}
+GET /api/api/v1/testimonies/embed/{embedId}
 
 # Returns verified testimony data for website embedding
 {
@@ -91,7 +91,7 @@ Authorization: Bearer <jwt-token>
 ### Roles & Permissions
 - **CONSUMER**: Can submit testimonies, view own testimonies
 - **ORGANIZATION**: Can manage profile, view testimonies about them, get embed codes  
-- **ADMIN**: Can verify/reject testimonies, view admin dashboard
+- **ADMIN**: Can verify/reject testimonies, view admin dashboard; implemented as org-scoped admins (only for their organization).
 
 ## 🚀 Quick Start
 
@@ -131,7 +131,7 @@ http://localhost:3000/api/docs
 ## 🔥 Core MVP Business Logic
 
 ### Testimony Creation Flow
-1. Consumer submits testimony via `POST /api/v1/testimonies`
+1. Consumer submits testimony via `POST /api/api/v1/testimonies`
 2. System generates unique `embedId` using nanoid
 3. Testimony status set to `PENDING`
 4. Testimony saved to database
@@ -140,7 +140,7 @@ http://localhost:3000/api/docs
 **This is the most important piece of logic in the entire MVP:**
 
 ```typescript
-// POST /api/v1/admin/verifications
+// POST /api/api/v1/admin/verifications
 async processVerification(testimonyId, outcome, adminId, notes) {
   await transaction(() => {
     // 1. Update Testimony Status
@@ -168,29 +168,29 @@ async processVerification(testimonyId, outcome, adminId, notes) {
 ## 📊 Key MVP Endpoints
 
 ### Public Endpoints
-- `GET /api/v1/testimonies/embed/{embedId}` - **THE MONEY ENDPOINT** 💰
+- `GET /api/api/v1/testimonies/embed/{embedId}` - **THE MONEY ENDPOINT** 💰
 
 ### Consumer Endpoints
-- `POST /api/v1/testimonies` - Submit testimony
-- `GET /api/v1/me/testimonies` - View own testimonies
+- `POST /api/api/v1/testimonies` - Submit testimony
+- `GET /api/api/v1/me/testimonies` - View own testimonies
 
 ### Organization Endpoints  
-- `GET /api/v1/organizations/me` - Organization dashboard
-- `PUT /api/v1/organizations/me` - Update profile
-- `GET /api/v1/organizations/me/testimonies` - All testimonies about org
-- `GET /api/v1/organizations/me/testimonies/verified` - Verified testimonies with embed codes
+- `GET /api/api/v1/organizations/me` - Organization dashboard
+- `PUT /api/api/v1/organizations/me` - Update profile
+- `GET /api/api/v1/organizations/me/testimonies` - All testimonies about org
+- `GET /api/api/v1/organizations/me/testimonies/verified` - Verified testimonies with embed codes
 
 ### Admin Endpoints
-- `GET /api/v1/admin/dashboard/stats` - Dashboard statistics
-- `GET /api/v1/admin/testimonies/pending` - Pending testimonies queue
-- `POST /api/v1/admin/verifications` - **CORE VERIFICATION ACTION** 🎯
-- `GET /api/v1/admin/verifications` - Verification history
+- `GET /api/api/v1/admin/dashboard/stats` - Dashboard statistics
+- `GET /api/api/v1/admin/testimonies/pending` - Pending testimonies queue
+- `POST /api/api/v1/admin/verifications` - **CORE VERIFICATION ACTION** 🎯
+- `GET /api/api/v1/admin/verifications` - Verification history
 
 ## 🎮 Testing the MVP
 
 ### 1. Submit a Testimony (as Consumer)
 ```bash
-curl -X POST http://localhost:3000/api/v1/testimonies \
+curl -X POST http://localhost:3000/api/api/v1/testimonies \
   -H "Authorization: Bearer <consumer-jwt>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -201,7 +201,7 @@ curl -X POST http://localhost:3000/api/v1/testimonies \
 
 ### 2. Verify the Testimony (as Admin)  
 ```bash
-curl -X POST http://localhost:3000/api/v1/admin/verifications \
+curl -X POST http://localhost:3000/api/api/v1/admin/verifications \
   -H "Authorization: Bearer <admin-jwt>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -213,7 +213,7 @@ curl -X POST http://localhost:3000/api/v1/admin/verifications \
 
 ### 3. Embed the Testimony (Public)
 ```bash
-curl http://localhost:3000/api/v1/testimonies/embed/abc123def456
+curl http://localhost:3000/api/api/v1/testimonies/embed/abc123def456
 ```
 
 ## 🚫 MVP Exclusions

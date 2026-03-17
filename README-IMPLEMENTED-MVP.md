@@ -174,11 +174,11 @@ GET  /api/api/v1/admin/verifications          - Verification history ✅
 
 ### Verification Endpoints (New Module)
 ```
-POST /api/v1/verification             - Create verification record
-GET  /api/v1/verification/history     - Verification history with filters
-GET  /api/v1/verification/testimony/:id - Get verification by testimony ID
-GET  /api/v1/verification/stats       - Verification statistics
-POST /api/v1/verification/bulk        - Bulk verification operations
+POST /api/api/v1/verification             - Create verification record
+GET  /api/api/v1/verification/history     - Verification history with filters
+GET  /api/api/v1/verification/testimony/:id - Get verification by testimony ID
+GET  /api/api/v1/verification/stats       - Verification statistics
+POST /api/api/v1/verification/bulk        - Bulk verification operations
 ```
 
 ### Organization Endpoints
@@ -193,7 +193,7 @@ GET  /api/api/v1/organizations/me/testimonies/verified - Verified testimonies
 ```
 ### Public Endpoints
 
-GET  /api/v1/testimonies/embed/{embedId}  - Public testimony access (no auth required) ✅
+GET  /api/api/v1/testimonies/embed/{embedId}  - Public testimony access (no auth required) ✅
 ```
 
 ## 🔥 Implemented Business Logic
@@ -258,7 +258,7 @@ async createVerification(dto: CreateVerificationDto): Promise<VerificationResult
 ### QR Code Implementation (External Service Strategy)
 **Current Approach**: External QR generation service for space efficiency
 - QR codes generated **on-demand** via `https://api.qrserver.com/v1/create-qr-code/`
-- **QR Content**: Direct API URLs (e.g., `{API_BASE_URL}/api/v1/testimonies/embed/abc123def456`) 
+- **QR Content**: Direct API URLs (e.g., `{API_BASE_URL}/api/api/v1/testimonies/embed/abc123def456`) 
 - **Database storage**: Only URL strings (~80 bytes per QR)
 - **User experience**: Scan QR → Direct API endpoint returns testimony JSON (public access)
 - **Frontend delivery**: Receives QR URL → Browser fetches image from external service  
