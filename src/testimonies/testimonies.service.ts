@@ -47,7 +47,7 @@ export class TestimoniesService {
       if (!author) {
         throw new NotFoundException(`Author user not found: ${authorId}`);
       }
-      
+
       if (!subject) {
         throw new NotFoundException(`Subject user not found: ${subjectId}. Please ensure the user is registered in the system.`);
       }
